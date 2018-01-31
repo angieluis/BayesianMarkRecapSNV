@@ -177,5 +177,5 @@ print(cjs.Prcp.sex,digits=3) #does ok
 traceplot(cjs.Prcp.sex) 
 
 
-
+#test test test
 
