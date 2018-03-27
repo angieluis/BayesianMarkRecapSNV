@@ -251,10 +251,16 @@ SIms.init.z <- function(ch, f){
   
   for (i in 1:dim(ch)[1]){ 
     v=which(is.na(zch[i,(f[i]+1):dim(zch)[2]])) # all unknown after first cap
-    zch[i,-(v+f[i])] <- NA        # all the known states make NA #doesn't work when all time points are known because length of v is 0
+    zch[i,-(v+f[i])] <- NA        # all the known states make NA #doesn't work when all time points are known because length of v is 0, so:
     if(length(v)==0){zch[i,f[i]:dim(zch)[2]]<-NA}
-    zch[i,v+f[i]] <- sample(known.states, length(v), replace = TRUE) # unknown sample from known
-    }  
+    
+    for(t in 1:length(v)){
+      ind <- which(zch[i,]>0)
+      
+      zch[i,v[t]] <- max(zch[i,1:v[t-1]]) # for initial value gives max of those seen before (so won't return a 1 if after a 2)
+            
+    }
+  }
   return(zch)
 }
 
@@ -284,7 +290,7 @@ ms <- jags(bugs.data, inits, parameters, "msSI.bug", n.chains = nc, n.thin = nt,
 date()
 
 ##### getting error: node inconsistent with parents z[8,5] (or z[2,5] - changes with different iterations)... This probably has to do with init.z and/or known.state.SIms values not being consistent with what I've specified. Prob known state or where transition parameters are 0 or 1.
-
+### Josh thinks its the initial values, and will only be a prob with the first iteration, so prob it's a 1 coming up after a 2. So I need to have it be a 1 if before any 2's and a 2 if after instead of a random draw from 1 or 2.
 
 
 print(ms, digits = 3)
