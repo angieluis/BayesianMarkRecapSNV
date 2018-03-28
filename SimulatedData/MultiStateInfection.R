@@ -252,13 +252,13 @@ SIms.init.z <- function(ch, f){
   for (i in 1:dim(ch)[1]){ 
     v=which(is.na(zch[i,(f[i]+1):dim(zch)[2]])) # all unknown after first cap
     zch[i,-(v+f[i])] <- NA        # all the known states make NA #doesn't work when all time points are known because length of v is 0, so:
+    rch=replace(ch,ch==3,NA)
     if(length(v)==0){zch[i,f[i]:dim(zch)[2]]<-NA}
-    
-    for(t in 1:length(v)){
-      ind <- which(zch[i,]>0)
+    if(length(v)>0){
+    for(j in 1:length(v)){
+      zch[i,v[j]+f[i]] <- max(rch[i,1:(v[j]-1+f[i])],na.rm=TRUE) # for initial value gives max of those seen before (so won't return a 1 if after a 2)
       
-      zch[i,v[t]] <- max(zch[i,1:v[t-1]]) # for initial value gives max of those seen before (so won't return a 1 if after a 2)
-            
+    }      
     }
   }
   return(zch)
@@ -284,13 +284,11 @@ nt <- 6
 nb <- 2000
 nc <- 3
 
-# run model in jags  (BRT 8 min)
+# run model in jags  (~12 min)
 date()
 ms <- jags(bugs.data, inits, parameters, "msSI.bug", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb)
 date()
 
-##### getting error: node inconsistent with parents z[8,5] (or z[2,5] - changes with different iterations)... This probably has to do with init.z and/or known.state.SIms values not being consistent with what I've specified. Prob known state or where transition parameters are 0 or 1.
-### Josh thinks its the initial values, and will only be a prob with the first iteration, so prob it's a 1 coming up after a 2. So I need to have it be a 1 if before any 2's and a 2 if after instead of a random draw from 1 or 2.
 
 
 print(ms, digits = 3)
