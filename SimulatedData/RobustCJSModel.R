@@ -29,16 +29,25 @@ revlogit=function(x){
 # CH.secondary
 
 ### code to simulate closed data, going to use it to make robust design secondary occasitons
-data.fn <- function(N = 100, p = 0.5, T = 3){
-  yfull <- yobs <- array(NA, dim = c(N, T))
-  for (j in 1:T){
-    yfull[,j] <- rbinom(n = N, size = 1, prob = p)
+data.fn <- function(N = 200, T = 3, p = 0.3, c = 0.4){
+  yfull <- yobs <- array(NA, dim = c(N, T) )
+  p.eff <- array(NA, dim = N)
+  
+  # First capture occasion
+  yfull[,1] <- rbinom(n = N, size = 1, prob = p)
+  
+  # Later capture occasions
+  for (j in 2:T){
+    p.eff <- ifelse(sum(yfull[,1:(j-1)])==0,p,c) #if caught any time previously then c
+    # will need to modify for robust design so if caught any time previously in this primary session
+    yfull[,j] <- rbinom(n = N, size = 1, prob = p.eff)
   }
+  
   ever.detected <- apply(yfull, 1, max)
   C <- sum(ever.detected)
   yobs <- yfull[ever.detected == 1,]
   cat(C, "out of", N, "animals present were detected.\n")
-  return(list(N = N, p = p, C = C, T = T, yfull = yfull, yobs = yobs))
+  return(list(N = N, p = p, c = c, C = C, T = T, yfull = yfull, yobs = yobs))
 }
 
 
@@ -94,9 +103,13 @@ sink("robust_cjs.bug")
 cat("					######<--------------------- uncomment 
 model{
 	
-###############Priors and constraints (specifiying the model)
+###############Priors and constraints
+mean.phi ~ dunif(0, 1) # prior for phi
+mean.p ~ dunif(0, 1)   # prior for p
+mean.c ~ dunif(0, 1)   # prior for c
+    
 for(i in 1:nind){
-	for(m in f[i]:(n.primary.occasions-1)){
+	for(m in f[i]:n.primary.occasions){  ### for p need every time for phi need -1
 
 		# phi has only 2 dimensions [indiv, and primary occasions]
     phi[i,m] <- mean.phi   # could specify covariates here
@@ -109,13 +122,9 @@ for(i in 1:nind){
     } #m for months
 	} #i for individual
 
-mean.phi ~ dunif(0, 1) # prior for phi
-mean.p ~ dunif(0, 1)   # prior for p
-mean.c ~ dunif(0, 1)   # prior for c
+#phi <- phi[,-(n.primary.occasions)] #remove last phi because need one less
 
-
-############## Need to alter below...  
-#############Likelihood 		## shouldn't have to change this to run diff models
+#############Likelihood 		
 for(i in 1:nind){
 	#define latent state at first capture # this applies to primary only
   # dimensions [individual, primary session (month)]
@@ -134,13 +143,13 @@ for(i in 1:nind){
 	  #observation process			# caught or not
 	  #first secondary occasion within a primary occastion:
 	  y[i, 1, m] ~ dbern(p.eff[i, 1, m])
-	  p.eff[i, 1, m] <- z[i, m] * p[i, 1, m] 
+	  p.eff[i, 1, m] <- z[i, m] * p[i, 1, m]   #### problem here
 	  
 	  #loop over rest of secondary occasions per primary
 	  for(d in 2:n.secondary.occasions){
 		  y[i, d, m] ~ dbern(p.eff[i, d, m]) 		# p.eff is prob of capture
 		  p.eff[i, d, m] <- z[i, m] * ifelse(sum(y[i, 1:(d-1), m])==0, p[i, d, m], c[i, d, m])	# capture prob= p * if it was alive
-		  #again lukacs lab code has p[i,m] which makes more sense
+		  # think about p and phi and indexing. need p for each month and one less phi
 
 	   } #d
 		} #m
@@ -202,11 +211,12 @@ date()
 ## Call JAGS from R
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
-
+# 20 seconds
 
 #sumarize posteriors
 print(robust.cjs,digits=3) #does ok 
 
+# estimating p too high. everything else ok.
 
 traceplot(robust.cjs) 
 
