@@ -25,6 +25,7 @@ revlogit=function(x){
 
 ######################################################################################
 ##########  simulate data 
+### problem. Animals are being detected that are not alive.
 ######################################################################################
 
 # Define parameter values
@@ -78,7 +79,7 @@ simul.cjs.rb <- function(PHI, P, C, marked, n.sec.occasions){
       #Bernouli trial: is indiv captured?
       ########  secondary occasions, d for days
       for(d in 1:n.sec.occasions){
-        p.eff <- ifelse(sum(y[i, 1:(d-1), m])==0, P[i, m], C[i, m]) #if caught any time previously in this session (m) then c
+        p.eff <- ifelse(sum(y[i, 1:(d-1), m])==0, P[i, m], C[i, m]) * z[i, m] #if caught any time previously in this session (m) then c, and if not alive, can't be caught
         y[i, d, m] <- rbinom(1, 1, prob = p.eff)
       } #d
     } #m
@@ -228,12 +229,12 @@ date()
 ## Call JAGS from R
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
-# 20 seconds
+# 20 min for 20 time steps and 20 marked each time
+# 6-8 minutes for  15 time steps and 20 marked each time
 
 #sumarize posteriors
 print(robust.cjs,digits=3) #does ok 
 
-# c and p ok, but overestimating phi. Need to check my simulation function. Am I making sure animals that are dead are not detected? I think so. Double check
 
 traceplot(robust.cjs) 
 
