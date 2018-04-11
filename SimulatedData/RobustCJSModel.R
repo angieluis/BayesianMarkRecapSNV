@@ -18,68 +18,83 @@ revlogit=function(x){
 # secondary session info?
 
 # y.secondary[i, d, m] # i=individual, d=day, m=month
-# if 60 primary occasions (months) each with 3 secondary occasions (days) and 300 individuals, then 60 matrices that are dimentions 300 by 3.  300,3,60. IF secondary occsions not always same length, then this could be a problem?
+# if 60 primary occasions (months) each with 3 secondary occasions (days) and 300 individuals, then 60 matrices that are dimentions 300 by 3.  300,3,60. IF secondary occasions not always same length, then this could be a problem?
 
 # y.primary[i, m] # which is basically summed over days (or ifelse(caught at all,1,0)) so maybe don't need an actual separate array
 
 
-########################## need to simulate data where survival is a (logit) linear function of precipitation & p & c are a function of sex
+######################################################################################
+##########  simulate data 
+######################################################################################
 
-# call full CH with secondary occasions as 2nd dimension and primary as 3rd
-# CH.secondary
+# Define parameter values
+n.prim.occasions <- 20						#number of primary capture occasions
+n.sec.occasions <- 3            # number of secondary occasions
 
-### code to simulate closed data, going to use it to make robust design secondary occasitons
-data.fn <- function(N = 200, T = 3, p = 0.3, c = 0.4){
-  yfull <- yobs <- array(NA, dim = c(N, T) )
-  p.eff <- array(NA, dim = N)
+marked <- rep(20, n.prim.occasions-1)			#annual number of newly marked indiv
+
+phi <- rep(0.65,n.prim.occasions-1)
+p <- rep(0.3, n.prim.occasions)
+c <- rep(0.4, n.prim.occasions)
+
+#define matrices with survival and recap probs
+PHI <- matrix(phi, ncol=n.prim.occasions-1, nrow=sum(marked))
+P <- matrix(p, ncol=n.prim.occasions, nrow=sum(marked))
+C <- matrix(c, ncol=n.prim.occasions, nrow=sum(marked))
+
+#define function to simulate a catpure history matrix (CH)
+simul.cjs.rb <- function(PHI, P, C, marked, n.sec.occasions){
+  n.prim.ocassions <- dim(PHI)[2]+1
+  z <- array(0, dim = c(sum(marked), n.prim.occasions)) # z is actual state
+  y <- array(0, dim = c(sum(marked), n.sec.occasions, n.prim.occasions)) # y is Ch observed so includes secondary occasions
   
-  # First capture occasion
-  yfull[,1] <- rbinom(n = N, size = 1, prob = p)
   
-  # Later capture occasions
-  for (j in 2:T){
-    p.eff <- ifelse(sum(yfull[,1:(j-1)])==0,p,c) #if caught any time previously then c
-    # will need to modify for robust design so if caught any time previously in this primary session
-    yfull[,j] <- rbinom(n = N, size = 1, prob = p.eff)
-  }
+  #define a vector with the occasion of marking
+  mark.occ <- rep(1:length(marked), marked[1:length(marked)])
   
-  ever.detected <- apply(yfull, 1, max)
-  C <- sum(ever.detected)
-  yobs <- yfull[ever.detected == 1,]
-  cat(C, "out of", N, "animals present were detected.\n")
-  return(list(N = N, p = p, c = c, C = C, T = T, yfull = yfull, yobs = yobs))
+  #fill the CH Matrix
+  for(i in 1:sum(marked)){
+    z[i, mark.occ[i]] <- 1		#put a 1 at the release occasion
+    
+    # for first month caught 
+    #Bernouli trial: is indiv captured?
+    ########  secondary occasions, d for days
+    for(d in 1:n.sec.occasions){
+    p.eff <- ifelse(sum(y[i, 1:(d-1), mark.occ[i]])==0, P[i, mark.occ[i]], C[i, mark.occ[i]]) #if caught any time previously in this session then use c instead of p
+    y[i, d, mark.occ[i]] <- rbinom(1, 1, prob = p.eff)
+     } #d
+    # if never caught then randomly pick a secondary occasion for capture
+    if(sum(y[i, , mark.occ[i]])==0){y[i, sample(1:n.sec.occasions, 1), mark.occ[i]] <- 1}
+    
+    if(mark.occ[i] == n.prim.occasions) next	#starts next iter of loop if caught only at last occasion
+    
+    for(m in (mark.occ[i]+1):n.prim.occasions){ # m is primary occasion (month)
+      #p.eff <- array(NA, dim = sum(marked))
+      mu1 <- PHI[i, m-1] * z[i, m-1] # this assures that animals stay dead
+      z[i, m] <-  rbinom(1, 1, mu1) 		#Bernouli trial: does animal survive
+      
+      if(mu1==0) break				# if dead, move to next indiv
+    
+      #Bernouli trial: is indiv captured?
+      ########  secondary occasions, d for days
+      for(d in 1:n.sec.occasions){
+        p.eff <- ifelse(sum(y[i, 1:(d-1), m])==0, P[i, m], C[i, m]) #if caught any time previously in this session (m) then c
+        y[i, d, m] <- rbinom(1, 1, prob = p.eff)
+      } #d
+    } #m
+  } #i
+  return(list(true.state=z,observed=y))	
 }
 
+sim.data=simul.cjs.rb(PHI, P, C, marked, n.sec.occasions)
 
-CH.secondary <- array(0,dim=c(40,3,12))
-for(i in 1:12){
-  
-  #months 1:3
-  #indiv 1:10
-  for(i in 1:3){
-    CH.secondary[,,i] <- rbind(data.fn()$yobs[1:10,],matrix(0,nrow=30,ncol=3))
-  } 
-  
-  #months 4:6
-  #indiv 11:20
-  for(i in 4:6){
-    CH.secondary[,,i] <- rbind(matrix(0,nrow=10,ncol=3),data.fn()$yobs[1:10,],matrix(0,nrow=20,ncol=3))
-  } 
-  
-  #months 7:9
-  # indiv 21:30
-  for(i in 7:9){
-    CH.secondary[,,i] <- rbind(matrix(0,nrow=20,ncol=3),data.fn()$yobs[1:10,],matrix(0,nrow=10,ncol=3))
-  } 
-  
-  #months 10:12
-  #indiv 31:40
-  for(i in 10:12){
-  CH.secondary[,,i] <- rbind(matrix(0,nrow=30,ncol=3),data.fn()$yobs[1:10,])
-  } 
-}
+CH.secondary <- sim.data$observed
+######################################################################################
+# end simulating data 
+######################################################################################
 
-# [indiv, secondary occasions, primary occasions]
+
+
 
 ####################################
 CH.primary <- apply(CH.secondary,c(1,3),sum)
@@ -122,33 +137,34 @@ for(i in 1:nind){
     } #m for months
 	} #i for individual
 
-#phi <- phi[,-(n.primary.occasions)] #remove last phi because need one less
+#phi <- phi[,-(n.primary.occasions)] #remove last phi because need one less. this didn't work. Only works when phi for every primary occasion. I think this is because not estimating p for first month caught when should. see below. So may need to adjust this when want to estimate N (S and I) from closed secondary sessions.
 
 #############Likelihood 		
 for(i in 1:nind){
-	#define latent state at first capture # this applies to primary only
+	#define latent state at first capture 
   # dimensions [individual, primary session (month)]
 	z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
 	
-	
-	
-	for(m in  (f[i]+1):n.primary.occasions){
+	for(m in  (f[i]+1):n.primary.occasions){  # because don't start until time 2, don't estimate p and c for first primary session. This may be a problem when want to estimate N later.
 		
 	  #state process				# alive or dead
 	  z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
 		mu1[i, m] <- phi[i, m]*z[i, m-1] # this assures that animals stay dead
-		#lukacs lab code has phi[i,m] book has phi[i,m-1]. which one is right? prob doesn't matter. changes indexing so just need to keep track of it.
+		# Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
+    # Prob doesn't matter. Changes indexing so just need to keep track of it.
 	
 	
 	  #observation process			# caught or not
 	  #first secondary occasion within a primary occastion:
 	  y[i, 1, m] ~ dbern(p.eff[i, 1, m])
-	  p.eff[i, 1, m] <- z[i, m] * p[i, 1, m]   #### problem here
+	  p.eff[i, 1, m] <- z[i, m] * p[i, 1, m]   
 	  
-	  #loop over rest of secondary occasions per primary
+	  #loop over rest of secondaryp occasions per primary
 	  for(d in 2:n.secondary.occasions){
 		  y[i, d, m] ~ dbern(p.eff[i, d, m]) 		# p.eff is prob of capture
-		  p.eff[i, d, m] <- z[i, m] * ifelse(sum(y[i, 1:(d-1), m])==0, p[i, d, m], c[i, d, m])	# capture prob= p * if it was alive
+		  p.eff[i, d, m] <- z[i, m] * ifelse(sum(y[i, 1:(d-1), m])==0, p[i, d, m], c[i, d, m])	
+      # capture prob= (p if not caught previously that session or c if was caught that session) 
+      # multiply by if it was alive (so can't capture animal that not alive)
 		  # think about p and phi and indexing. need p for each month and one less phi
 
 	   } #d
@@ -179,8 +195,9 @@ known.state.cjs=function(ch){
 ##### Bundle data
 bugs.data=list(y=CH.secondary,f=f,nind=dim(CH.secondary)[1],n.secondary.occasions=dim(CH.secondary)[2],n.primary.occasions=dim(CH.secondary)[3],z=known.state.cjs(CH.primary))
 
-### we shouldn't give initial values for those elements of z whose value is specified in the data, they get an NA
-#function to create matrix of initial values for latent state z
+###### function to create matrix of initial values for latent state z
+# we shouldn't give initial values for those elements of z whose value is specified in the data.
+# they get an NA
 cjs.init.z=function(ch,f){
 	for(i in 1:dim(ch)[1]){
 		if(sum(ch[i,])==1) next
@@ -216,7 +233,7 @@ date() #tell how long it ran
 #sumarize posteriors
 print(robust.cjs,digits=3) #does ok 
 
-# estimating p too high. everything else ok.
+# c and p ok, but overestimating phi. Need to check my simulation function. Am I making sure animals that are dead are not detected? I think so. Double check
 
 traceplot(robust.cjs) 
 
