@@ -11,7 +11,7 @@ library(R2jags)
 setwd("~/Documents/JAGS")
 
 
-# 9.2. Estimation of movement between two states
+# 9.2. Estimation of survival and force of infection
 
 
 #############################################################
@@ -113,6 +113,9 @@ simul.ms <- function(PSI.STATE, PSI.OBS, marked, unobservable = NA){
 sim <- simul.ms(PSI.STATE, PSI.OBS, marked)
 CH <- sim$CH
 
+
+########################################################################## analyze the data
+
 # Compute vector with occasion of first capture
 get.first <- function(x) min(which(x!=0))
 f <- apply(CH, 1, get.first)
@@ -123,7 +126,7 @@ rCH <- CH          # Recoded CH
 rCH[rCH==0] <- 3
 
 
-##################################################################
+#########################################################################
 # 9.2.3. Analysis of the model
 # Specify model in BUGS language
 sink("msSI.bug")
@@ -212,26 +215,26 @@ sink()
 
 
 # Function to create known latent states z 
-###changed this so can't go back to S from I. 
+### fill in all known but unobserved state (can't go back to S from I)
 #If observed as I, then not seen, and seen again later, when not seen must have been I. 
 #If observed as S, not seen, then observed as S again, then must be S.
 #Allows us to fill in a lot. And should speed up computation time
-known.state.SIms=function(ms,notseen){ 
+known.state.SIms <- function(ms, notseen){ # ms is multistate capture history
   # notseen: label for 'not seen' #here is 3 (Dead)
   state <- ms
   state[state==notseen] <- NA
   for(i in 1:dim(ms)[1]){
-    if(length(which(ms[i,]==2))>0){ #filling in S's where can
-    minI=min(which(ms[i,]==2))
-    maxI=max(which(ms[i,]==2))
-    state[i,minI:maxI]=2}
-    if(length(which(ms[i,]==1))>0){  #filling in I's where can
-      minI=min(which(ms[i,]==1))
-      maxI=max(which(ms[i,]==1))
-      state[i,minI:maxI]=1}
-    state[i,min(which(ms[i,]<3))]=NA			
+    if(length(which(ms[i, ] == 2)) > 0){ #filling in I's where can
+    minI <- min(which(ms[i, ] == 2))
+    maxI <- max(which(ms[i, ] == 2))
+    state[i, minI:maxI] <- 2}
+    if(length(which(ms[i, ]==1)) > 0){  #filling in S's where can
+      minS <- min(which(ms[i, ] == 1))
+      maxS <- max(which(ms[i, ] == 1))
+      state[i, minI:maxI] <- 1}
+    state[i, min(which(ms[i, ]<3))] <- NA			
   }
-  state[state==3]=NA
+  state[state==3] <- NA
   return(state)
 }
 
@@ -241,8 +244,8 @@ known.state.SIms=function(ms,notseen){
 
 # Function to create initial values for unknown z  
 #filling in something for every 3/NA (not captured) in known.state function after initial capture 
-#randomly samples from alive states for those that are unknown after initial capture
-# reversed from known.state - want NAs everywhere we know and 1:f. 
+#for those that are unknown after initial capture, make it alive and in same state as last seen
+#  want NAs everywhere we know and 1:f. 
 SIms.init.z <- function(ch, f){ 
 
   zch = known.state.SIms(ch, 3)
@@ -250,21 +253,19 @@ SIms.init.z <- function(ch, f){
   known.states <- 1:(states-1) # remove unknown state
   
   for (i in 1:dim(ch)[1]){ 
-    v=which(is.na(zch[i,(f[i]+1):dim(zch)[2]])) # all unknown after first cap
+    v <- which(is.na(zch[i,(f[i]+1):dim(zch)[2]])) # all unknown after first cap
     zch[i,-(v+f[i])] <- NA        # all the known states make NA #doesn't work when all time points are known because length of v is 0, so:
     rch=replace(ch,ch==3,NA)
-    if(length(v)==0){zch[i,f[i]:dim(zch)[2]]<-NA}
+    if(length(v)==0){zch[i, f[i]:dim(zch)[2]] <- NA}
     if(length(v)>0){
     for(j in 1:length(v)){
-      zch[i,v[j]+f[i]] <- max(rch[i,1:(v[j]-1+f[i])],na.rm=TRUE) # for initial value gives max of those seen before (so won't return a 1 if after a 2)
+      zch[i, v[j]+f[i]] <- max(rch[i,1:(v[j]-1+f[i])],na.rm=TRUE) # for initial value gives max of those seen before (so won't return a 1 if after a 2)
       
     }      
     }
   }
   return(zch)
 }
-
-
 
 
 
@@ -284,12 +285,12 @@ nt <- 6
 nb <- 2000
 nc <- 3
 
-# run model in jags  (~12 min)
+# run model 
 date()
 ms <- jags(bugs.data, inits, parameters, "msSI.bug", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb)
-date()
+date() # ~12 minutes
 
-
+# yay working, and estimates are good.
 
 print(ms, digits = 3)
 
