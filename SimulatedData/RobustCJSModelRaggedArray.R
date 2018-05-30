@@ -13,10 +13,12 @@ revlogit=function(x){
   exp(x)/(1+exp(x))}
 
 
-
-# each row is an observation with a row for each time an individual was caught, like
-# the rodent data
-
+# Data format: Data frame where
+# each row is an observation - each time an individual was caught, like the rodent data
+# e.g.  individual, ID1, was caught in the third month on days 2 and 3:
+# $individual  $primary   $secondary
+#   ID1           3           2
+#   ID1           3           3
 ######################################################################################
 ##########  simulate data 
 ######################################################################################
@@ -97,8 +99,8 @@ simul.cjs.rb <- function(PHI, P, C, marked, n.sec.occasions){
     }
   }
   observations <- observations[-1,]
-
-    return(list(true.state=z,observed.month.list=y,observed.data=observations))	
+  
+  return(list(true.state=z,observed.month.list=y,observed.data=observations))	
   
   
 }
@@ -129,7 +131,7 @@ for(m in 1:n.primary.occasions){
   n.secondary.occasions[m] <- length(unique(observed.data$secondary[which(observed.data$primary==m)]))
 }
 
-  
+
 # create a vector of first marking
 f <- numeric()
 for(i in 1:nind){
@@ -148,63 +150,64 @@ for(i in 1:nind){
 #specify model in BUGS language
 sink("robust_cjs_raggedarray.bug")
 cat("					######<--------------------- uncomment 
-    model{
-    
-    ###############Priors and constraints
-    mean.phi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean survival
-    mean.p ~ dnorm(0, 0.4)T(-10,10)   # prior for p
-    mean.c ~ dnorm(0, 0.4)T(-10,10)   # prior for c
-    
-    for(i in 1:nind){
-      for(m in f[i]:n.primary.occasions){  ### for p need every time for phi need -1
-    
-        # phi has only 2 dimensions [indiv, and primary occasions]
-        logit(phi[i,m]) <- mean.phi   # could specify covariates here
-    
-          # p and c have 3 dimensions [indiv, secondary, primary]		
-          # will use the largest secondary occasion to determine dimensions and they won't all be used in the data / estimation
-          for(d in 1:max.secondary.occasions){
-            logit(p[i, d, m]) <- mean.p  # could specify covariates here
-            logit(c[i, d, m]) <- mean.c  
-          } #d for days
-      } #m for months
-    } #i for individual
-    
-
-    #############Likelihood 		#### Change this so only 1 loop - for each row of observation?
-    for(i in 1:nind){
-      #define latent state at first capture 
-      # dimensions [individual, primary session (month)]
-      z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
-    
-      for(m in  (f[i]+1):n.primary.occasions){  # because don't start until time 2, don't estimate p and c for first primary session. This may be a problem when want to estimate N later.
-    
-        #state process				# alive or dead
-        z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
-        mu1[i, m] <- phi[i, m]*z[i, m-1] # this assures that animals stay dead
-        # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
-        # Prob doesn't matter. Changes indexing so just need to keep track of it.
-      } # m
-    } # i
-      for(obs in 1:n.obs){
-    
-        #observation process			# caught or not
-        # What format will y take? My capture history dataframe? 
-        
-        if(y$secondary[obs]==1){ # if first secondary occasion within a primary occasion:
-          p.eff <- z[i[obs], m[obs]] * p[i[obs], 1, m[obs]]   
-          y[obs,] ~ dbern(p.eff)
-        }else{ #after the first day
-          p.eff <- z[i[obs], m[obs]] * ifelse(sum(y[i, 1:(d-1), m])==0, p[i[obs], d[obs], m[obs]], c[i[obs], d[obs], m[obs]])	### <------------ fix this
-          y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
-          # capture prob= (p if not caught previously that session or c if was caught that session) 
-          # multiply by if it was alive (so can't capture animal that not alive)
-          # think about p and phi and indexing. need p for each month and one less phi
-          }
-             
-        } #obs
+model{
+  
+  ###############Priors and constraints
+  mean.phi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean survival
+  mean.p ~ dnorm(0, 0.4)T(-10,10)   # prior for p
+  mean.c ~ dnorm(0, 0.4)T(-10,10)   # prior for c
+  
+  for(i in 1:nind){
+    for(m in f[i]:n.primary.occasions){  ### for p need every time for phi need -1
       
+      # phi has only 2 dimensions [indiv, and primary occasions]
+      logit(phi[i,m]) <- mean.phi   # could specify covariates here
+      
+      # p and c have 3 dimensions [indiv, secondary, primary]		
+      # will use the largest secondary occasion to determine dimensions and they won't all be used in the data / estimation
+      for(d in 1:max.secondary.occasions){
+        logit(p[i, d, m]) <- mean.p  # could specify covariates here
+        logit(c[i, d, m]) <- mean.c  
+      } #d for days
+    } #m for months
+  } #i for individual
+  
+  
+  #############Likelihood 		
+  # STATE PROCESS
+  for(i in 1:nind){
+    #define latent state at first capture 
+    # dimensions [individual, primary session (month)]
+    z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
+    
+    for(m in  (f[i]+1):n.primary.occasions){  
+      z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
+      mu1[i, m] <- phi[i, m]*z[i, m-1] # this assures that animals stay dead
+      # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
+      # Prob doesn't matter. Changes indexing so just need to keep track of it.
+    } # m
+  } # i
+  
+  # OBSERVATION PROCESS 
+  for(obs in 1:n.obs){   
+    if(y$secondary[obs]==1){ # if first secondary occasion within a primary occasion:
+      p.eff <- z[y$individual[obs], y$primary[obs]] * p[y$individual[obs], 1, y$primary[obs]]   
+      y[obs,] ~ dbern(p.eff)
+
+    }else{ #after the first day
+      
+      idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primar[obs])] # days that individual was caught that month
+      
+      p.eff <- z[y$individual[obs], y$primary[obs]] * # if it was caught before this day make c, otherwise p
+        ifelse(any(idays<y$secondary[obs]), c[y$individual[obs], y$secondary[obs], y$primary[obs]], p[y$individual[obs], y$secondary[obs], y$primary[obs]])	
+      
+      y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
+      # think about p and phi and indexing. need p for each month and one less phi
     }
+    
+  } #obs
+  
+}
     ",fill=TRUE)  #####<----------------uncomment this
 sink()
 
