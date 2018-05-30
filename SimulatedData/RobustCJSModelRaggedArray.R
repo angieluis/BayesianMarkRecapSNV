@@ -190,21 +190,14 @@ model{
   
   # OBSERVATION PROCESS 
   for(obs in 1:n.obs){   
-    if(y$secondary[obs]==1){ # if first secondary occasion within a primary occasion:
-      p.eff <- z[y$individual[obs], y$primary[obs]] * p[y$individual[obs], 1, y$primary[obs]]   
-      y[obs,] ~ dbern(p.eff)
-
-    }else{ #after the first day
+    idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primar[obs])] # days that individual was caught that month
       
-      idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primar[obs])] # days that individual was caught that month
-      
-      p.eff <- z[y$individual[obs], y$primary[obs]] * # if it was caught before this day make c, otherwise p
+    p.eff <- z[y$individual[obs], y$primary[obs]] * # if it was caught before this day make c, otherwise p
         ifelse(any(idays<y$secondary[obs]), c[y$individual[obs], y$secondary[obs], y$primary[obs]], p[y$individual[obs], y$secondary[obs], y$primary[obs]])	
       
-      y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
-      # think about p and phi and indexing. need p for each month and one less phi
-    }
-    
+    y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
+    # think about p and phi and indexing. need p for each month and one less phi
+
   } #obs
   
 }
