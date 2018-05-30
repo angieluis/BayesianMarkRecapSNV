@@ -116,10 +116,6 @@ observed.data <- sim.data$observed.data
 
 
 
-####################################
-#CH.primary <- apply(CH.secondary,c(1,3),sum)
-#CH.primary <- replace(CH.primary,CH.primary>1,1)
-
 
 ids <- unique(observed.data$individual)
 nind <- length(ids)
@@ -132,10 +128,9 @@ for(m in 1:n.primary.occasions){
 }
 
 
-# create a vector of first marking
-f <- numeric()
-for(i in 1:nind){
-  f[i] <- min(observed.data$primary[which(observed.data$individual==i)])
+CH.primary <- matrix(0, ncol=n.primary.occasions ,nrow=nind)
+for(i in 1:dim(observed.data)[1]){
+  CH.primary[observed.data[i,1], observed.data[i,2]] <- 1
 }
 
 # Recode CH matrix: note, a 0 is not allowed in WinBUGS!
@@ -147,18 +142,26 @@ for(i in 1:nind){
 
 
 
+# create a vector of first marking
+f <- numeric()
+for(i in 1:nind){
+  f[i] <- min(observed.data$primary[which(observed.data$individual==i)])
+}
+
+
+
 #specify model in BUGS language
 sink("robust_cjs_raggedarray.bug")
 cat("					######<--------------------- uncomment 
 model{
   
   ###############Priors and constraints
-  mean.phi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean survival
-  mean.p ~ dnorm(0, 0.4)T(-10,10)   # prior for p
-  mean.c ~ dnorm(0, 0.4)T(-10,10)   # prior for c
+  mean.phi ~ dnorm(0, 0.4)T(-10,10)     # prior for mean survival
+  mean.p ~ dnorm(0, 0.4)T(-10,10)       # prior for p
+  mean.c ~ dnorm(0, 0.4)T(-10,10)       # prior for c
   
   for(i in 1:nind){
-    for(m in f[i]:n.primary.occasions){  ### for p need every time for phi need -1
+    for(m in f[i]:n.primary.occasions){  
       
       # phi has only 2 dimensions [indiv, and primary occasions]
       logit(phi[i,m]) <- mean.phi   # could specify covariates here
@@ -176,13 +179,13 @@ model{
   #############Likelihood 		
   # STATE PROCESS
   for(i in 1:nind){
-    #define latent state at first capture 
+    # define latent state at first capture 
     # dimensions [individual, primary session (month)]
     z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
     
     for(m in  (f[i]+1):n.primary.occasions){  
       z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
-      mu1[i, m] <- phi[i, m]*z[i, m-1] # this assures that animals stay dead
+      mu1[i, m] <- phi[i, m] * z[i, m-1] # this assures that animals stay dead
       # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
       # Prob doesn't matter. Changes indexing so just need to keep track of it.
     } # m
@@ -190,10 +193,10 @@ model{
   
   # OBSERVATION PROCESS 
   for(obs in 1:n.obs){   
-    idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primar[obs])] # days that individual was caught that month
+    idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primary[obs])] # days that individual was caught that month
       
     p.eff <- z[y$individual[obs], y$primary[obs]] * # if it was caught before this day make c, otherwise p
-        ifelse(any(idays<y$secondary[obs]), c[y$individual[obs], y$secondary[obs], y$primary[obs]], p[y$individual[obs], y$secondary[obs], y$primary[obs]])	
+        ifelse(any(idays < y$secondary[obs]), c[y$individual[obs], y$secondary[obs], y$primary[obs]], p[y$individual[obs], y$secondary[obs], y$primary[obs]])	
       
     y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
     # think about p and phi and indexing. need p for each month and one less phi
@@ -207,7 +210,6 @@ sink()
 
 
 
-### change the format here
 #function to create matrix with info about known latent state z
 known.state.cjs=function(ch){
   state=ch
@@ -232,10 +234,10 @@ cjs.init.z=function(ch,f){
   for(i in 1:dim(ch)[1]){
     if(sum(ch[i,])==1) next
     n2=max(which(ch[i,]==1))
-    ch[i,f[i]:n2]=NA
+    ch[i,f[i]:n2] <- NA
   }
   for(i in 1:dim(ch)[1]){
-    ch[i,1:f[i]]=NA
+    ch[i,1:f[i]] <- NA
   }
   return(ch)	
 }
@@ -258,11 +260,10 @@ date()
 ## Call JAGS from R
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
-# 20 min for 20 time steps and 20 marked each time
-# 6-8 minutes for  15 time steps and 20 marked each time
+
 
 #sumarize posteriors
-print(robust.cjs,digits=3) #does ok 
+print(robust.cjs,digits=3) 
 
 
 traceplot(robust.cjs) 
