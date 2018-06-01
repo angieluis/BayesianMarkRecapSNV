@@ -374,8 +374,9 @@ SImsJS.init.z2 <- function(ch,states=4){ #states is number of states
 bugs.data <- list(y = rCH, n.occasions = dim(rCH)[2], M = dim(rCH)[1], z = known.state.SImsJS(rCH, 3))
 
 # Initial values
-inits <- function(){list(mean.phi = runif(2, 0, 1), mean.psi = runif(1, 0, 1), mean.p = runif(2, 0, 1), #mean.gamma = runif(2, 0, 1), 
-                         z = SImsJS.init.z2(rCH))}  
+inits <- function(){list(mean.phi = runif(2, 0, 1), mean.psi = runif(1, 0, 1), mean.p = runif(2, 0, 1)#, #mean.gamma = runif(2, 0, 1), 
+                        # z = SImsJS.init.z2(rCH)
+                        )}  
 
 # Parameters monitored
 parameters <- c("mean.p", "mean.psi", "mean.phi", "Nsuper", "N", "f")
