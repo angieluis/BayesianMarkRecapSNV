@@ -120,6 +120,12 @@ observed.data <- sim.data$observed.data
 ids <- unique(observed.data$individual)
 nind <- length(ids)
 
+# which column of dataframe 
+ind.c <- which(names(observed.data)=="individual")
+prim.c <- which(names(observed.data)=="primary")
+second.c <- which(names(observed.data)=="secondary")
+
+
 n.primary.occasions <- length(unique(observed.data$primary))
 max.secondary.occasions <- length(unique(observed.data$secondary))
 n.secondary.occasions <- numeric()
@@ -193,11 +199,11 @@ model{
   
   # OBSERVATION PROCESS 
   for(obs in 1:n.obs){   
-    idays <- y$secondary[which(y$individual==y$individual[obs] & y$primary==y$primary[obs])] # days that individual was caught that month
+    x1 <- which(y[,ind.c]==y[obs,ind.c])
+    idays <- y[x1[which(y[x1, prim.c] == y[obs, prim.c])], second.c] # days (secondary occasions) that individual was caught that month (primary occasion)
       
-    p.eff <- z[y$individual[obs], y$primary[obs]] * # if it was caught before this day make c, otherwise p
-        ifelse(any(idays < y$secondary[obs]), c[y$individual[obs], y$secondary[obs], y$primary[obs]], p[y$individual[obs], y$secondary[obs], y$primary[obs]])	
-      
+    # if it was caught before in this primary session use c, otherwise p
+    p.eff <- z[y[obs,ind.c], y[obs,prim.c]] * ifelse(any(idays < y[obs,second.c]), c[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]], p[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]])	
     y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
     # think about p and phi and indexing. need p for each month and one less phi
 
@@ -225,7 +231,10 @@ known.state.cjs=function(ch){
 
 
 ##### Bundle data
-bugs.data=list(y=observed.data, f=f, nind=nind, n.secondary.occasions=n.secondary.occasions, max.secondary.occasions=max.secondary.occasions, n.primary.occasions=n.primary.occasions, z=known.state.cjs(CH.primary)) 
+bugs.data=list(y=observed.data, f=f, nind=nind, #n.secondary.occasions=n.secondary.occasions, 
+               max.secondary.occasions=max.secondary.occasions, n.primary.occasions=n.primary.occasions, ind.c = which(names(observed.data)=="individual"), prim.c = which(names(observed.data)=="primary"), second.c = which(names(observed.data)=="secondary"),n.obs=dim(observed.data)[1],
+z=known.state.cjs(CH.primary)) 
+
 
 ###### function to create matrix of initial values for latent state z
 # we shouldn't give initial values for those elements of z whose value is specified in the data.
