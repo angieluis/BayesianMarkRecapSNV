@@ -225,13 +225,13 @@ known.state.SIms <- function(ms, notseen){ # ms is multistate capture history
   state[state==notseen] <- NA
   for(i in 1:dim(ms)[1]){
     if(length(which(ms[i, ] == 2)) > 0){ #filling in I's where can
-      minI <- min(which(ms[i, ] == 2))
-      maxI <- max(which(ms[i, ] == 2))
-      state[i, minI:maxI] <- 2}
+    minI <- min(which(ms[i, ] == 2))
+    maxI <- max(which(ms[i, ] == 2))
+    state[i, minI:maxI] <- 2}
     if(length(which(ms[i, ]==1)) > 0){  #filling in S's where can
-      minS <- min(which(ms[i, ] == 1))
-      maxS <- max(which(ms[i, ] == 1))
-      state[i, minS:maxS] <- 1}
+    minS <- min(which(ms[i, ] == 1))
+    maxS <- max(which(ms[i, ] == 1))
+    state[i, minS:maxS] <- 1}
     state[i, min(which(ms[i, ]<3))] <- NA			
   }
   state[state==3] <- NA
