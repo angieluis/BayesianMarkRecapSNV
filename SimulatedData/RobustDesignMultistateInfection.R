@@ -142,6 +142,7 @@ cat("
     # Likelihood 
     for (i in 1:nind){
     # Define latent state at first capture
+ ################# below here need to add in gamma .... and monitored derived params
     z[i,f[i]] <- y[i,f[i]]
     for (t in (f[i]+1):n.occasions){
     

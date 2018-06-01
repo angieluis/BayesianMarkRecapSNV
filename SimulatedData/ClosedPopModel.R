@@ -260,7 +260,7 @@ data.fn <- function(N = 200, T = 5, p = 0.3, c = 0.4){
   
   # Later capture occasions
   for (j in 2:T){
-    p.eff <- ifelse(sum(yaug[,1:(j-1)])==0,p,c) #if caught any time previously then c
+    p.eff <- ifelse(sum(yfull[,1:(j-1)])==0,p,c) #if caught any time previously then c
     # will need to modify for robust design so if caught any time previously in this primary session
     yfull[,j] <- rbinom(n = N, size = 1, prob = p.eff)
   }
@@ -289,17 +289,17 @@ cat("
     
     # Likelihood
     for (i in 1:M){
-    z[i] ~ dbern(omega)
+       z[i] ~ dbern(omega)
     
-    # First occasion
-    yaug[i,1] ~ dbern(p.eff[i,1])
-    p.eff[i,1] <- z[i] * p
+       # First occasion
+       yaug[i,1] ~ dbern(p.eff[i,1])
+       p.eff[i,1] <- z[i] * p
     
-    # All subsequent occasions
-    for (t in 2:T){
-    yaug[i,t] ~ dbern(p.eff[i,t])
-    p.eff[i,t] <- z[i] * ifelse(sum(yaug[i,1:(t-1)])==0,p,c)
-    } #t
+       # All subsequent occasions
+       for (t in 2:T){
+         yaug[i,t] ~ dbern(p.eff[i,t])
+         p.eff[i,t] <- z[i] * ifelse(sum(yaug[i,1:(t-1)])==0,p,c)
+        } #t
     } #i
     
     # Derived quantities

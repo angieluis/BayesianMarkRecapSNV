@@ -92,6 +92,8 @@ sink()
  
 
 #function to create matrix with info about known latent state z
+#  I know we condition on first cpature, but why wouldn't you put a 1 in here because we know they're alive and need to multiply by that for the next step. 
+# This is giving some of z so we don't have to estimate it. But how does it know it doesn't need to estimate it? In the likelihood above, all i,t for z are included in the code, not just those that are unknown.
 known.state.cjs=function(ch){
 	state=ch
 	for(i in 1:dim(ch)[1]){
@@ -107,8 +109,9 @@ known.state.cjs=function(ch){
 ##### Bundle data
 bugs.data=list(y=CH,f=f,nind=dim(CH)[1],n.occasions=dim(CH)[2],z=known.state.cjs(CH))
 
-### we shouldn't give initial values for those elements of z whose value is specified in the data, they get an NA
 #function to create matrix of initial values for latent state z
+### we shouldn't give initial values for those elements of z whose value is specified in the data, they get an NA
+# but since we filled in those we know were alive in the known.states.cjs shouldn't that information go in here too? Shouldn't we remvoe the ones that we know- don't need to estimate?
 cjs.init.z=function(ch,f){
 	for(i in 1:dim(ch)[1]){
 		if(sum(ch[i,])==1) next
@@ -147,6 +150,7 @@ cjs.c.c=jags(bugs.data,inits,parameters,"cjs-c-c.bug",n.chains=nc,n.thin=nt,n.it
 print(cjs.c.c,digits=3)
 
 traceplot(cjs.c.c)
+
 
 #I believe this is all three chains after burnin and thinning:
 hist(cjs.c.c$BUGSoutput$sims.list$mean.p)
