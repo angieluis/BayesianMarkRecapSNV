@@ -158,7 +158,7 @@ for(i in 1:nind){
 
 #specify model in BUGS language
 sink("robust_cjs_raggedarray.bug")
-cat("					######<--------------------- uncomment 
+#cat("					######<--------------------- uncomment 
 model{
   
   ###############Priors and constraints
@@ -206,11 +206,12 @@ model{
     p.eff <- z[y[obs,ind.c], y[obs,prim.c]] * ifelse(any(idays < y[obs,second.c]), c[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]], p[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]])	
     y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
     # think about p and phi and indexing. need p for each month and one less phi
-
+# circular because y[obs,] depends on y[obs,...]?
+    
   } #obs
   
 }
-    ",fill=TRUE)  #####<----------------uncomment this
+#    ",fill=TRUE)  #####<----------------uncomment this
 sink()
 
 
