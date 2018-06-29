@@ -63,9 +63,7 @@ simul.cjs.rb <- function(PHI, P, C, marked, n.sec.occasions){
       
       y[[mark.occ[i]]][i, d] <- rbinom(1, 1, prob = p.eff)
     } #d
-    # if never caught then randomly pick a secondary occasion for capture
-    if(sum(y[[mark.occ[i]]][i, ])==0){y[[mark.occ[i]]][i, sample(1:n.sec.occasions[mark.occ[i]], 1)] <- 1}
-    
+
     if(mark.occ[i] == n.prim.occasions) next	#starts next iter of loop if caught only at last occasion
     
     for(m in (mark.occ[i]+1):n.prim.occasions){ # m is primary occasion (month)
@@ -83,31 +81,21 @@ simul.cjs.rb <- function(PHI, P, C, marked, n.sec.occasions){
     } #m
   } #i
   
+  # Remove individuals never captured
+  cap.sum <- rowSums(matrix(unlist(lapply(y,rowSums)),nrow=sum(marked),ncol=n.prim.occasions,byrow=FALSE))
+  never <- which(cap.sum == 0)
+  CH.sec <- lapply(y,function(x){x[-never,]})
+  Nt <- colSums(z)    # Actual population size
   
-  observations <- data.frame(individual=NA, primary=NA, secondary=NA)
-  for(i in 1:sum(marked)){
-    second<-numeric()
-    prim <- numeric()
-    ind <- numeric()
-    for(m in 1:length(y)){
-      second <- which(y[[m]][i,]==1)
-      prim <- rep(m, length(second))
-      ind <- rep(i, length(second))
-      if(length(second)>0){
-        observations <- rbind(observations,data.frame(individual=ind,primary=prim,secondary=second))
-      }
-    }
-  }
-  observations <- observations[-1,]
   
-  return(list(true.state=z,observed.month.list=y,observed.data=observations))	
+
+  return(list(true.state=z, captures.true=y, observed.month.list=CH.sec))	
   
   
 }
 
 sim.data=simul.cjs.rb(PHI, P, C, marked, n.sec.occasions)
 
-observed.data <- sim.data$observed.data
 
 ######################################################################################
 # end simulating data 
@@ -274,9 +262,9 @@ inits=function(){list(z=cjs.init.z(CH.primary,bugs.data$f),mean.phi=runif(1,0,1)
 parameters=c("mean.phi","mean.p","mean.c")
 
 #MCMCsettings
-ni=10000
+ni=1000
 nt=6
-nb=5000
+nb=500
 nc=3
 
 
