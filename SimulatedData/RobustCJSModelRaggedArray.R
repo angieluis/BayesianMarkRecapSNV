@@ -4,6 +4,8 @@
 #################################################################
 
 library(R2jags)
+library(tidyr)
+library(dplyr)
 setwd("~/Documents/JAGS")
 
 
@@ -13,12 +15,10 @@ revlogit=function(x){
   exp(x)/(1+exp(x))}
 
 
-# Data format: Data frame where
-# each row is an observation - each time an individual was caught, like the rodent data
-# e.g.  individual, ID1, was caught in the third month on days 2 and 3:
-# $individual  $primary   $secondary
-#   ID1           3           2
-#   ID1           3           3
+# Data format: went back to the list of capture histories (matrices) for each month
+#  each element of the list is a primary occasion (month), and the matrix is i by d (rows are individuals and columns are secondary occasions- days)
+# each month contains all animals in dataset (not just those caught that month)
+
 ######################################################################################
 ##########  simulate data 
 ######################################################################################
@@ -113,107 +113,66 @@ observed.data <- sim.data$observed.data
 # end simulating data 
 ######################################################################################
 
+CH.secondary <- sim.data$observed.month.list
 
+# create a primary CH from the secondary capture history:
+x <- lapply(CH.secondary,rowSums)
+v1 <- unlist(x)
+CH.primary <- matrix(replace(v1, v1>1, 1), nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
 
-
-
-ids <- unique(observed.data$individual)
-nind <- length(ids)
-
-# which column of dataframe 
-ind.c <- which(names(observed.data)=="individual")
-prim.c <- which(names(observed.data)=="primary")
-second.c <- which(names(observed.data)=="secondary")
-
-
-n.primary.occasions <- length(unique(observed.data$primary))
-max.secondary.occasions <- length(unique(observed.data$secondary))
-n.secondary.occasions <- numeric()
-for(m in 1:n.primary.occasions){
-  n.secondary.occasions[m] <- length(unique(observed.data$secondary[which(observed.data$primary==m)]))
-}
-
-
-CH.primary <- matrix(0, ncol=n.primary.occasions ,nrow=nind)
-for(i in 1:dim(observed.data)[1]){
-  CH.primary[observed.data[i,1], observed.data[i,2]] <- 1
-}
-
-# Recode CH matrix: note, a 0 is not allowed in WinBUGS!
-# 1 = seen alive in S, 2 = seen alive in I, 3 = not seen
-#rCH.primary <- CH.primary          # Recoded CH
-#rCH.primary[rCH.primary==0] <- 3
-#rCH.secondary <- CH.secondary          # Recoded CH
-#rCH.secondary[rCH.secondary==0] <- 3
-
-
-
-# create a vector of first marking
-f <- numeric()
-for(i in 1:nind){
-  f[i] <- min(observed.data$primary[which(observed.data$individual==i)])
-}
-
-
-
-#specify model in BUGS language
+####################################################specify model in BUGS language
 sink("robust_cjs_raggedarray.bug")
-#cat("					######<--------------------- uncomment 
-model{
-  
-  ###############Priors and constraints
-  mean.phi ~ dnorm(0, 0.4)T(-10,10)     # prior for mean survival
-  mean.p ~ dnorm(0, 0.4)T(-10,10)       # prior for p
-  mean.c ~ dnorm(0, 0.4)T(-10,10)       # prior for c
-  
-  for(i in 1:nind){
-    for(m in f[i]:n.primary.occasions){  
-      
-      # phi has only 2 dimensions [indiv, and primary occasions]
-      logit(phi[i,m]) <- mean.phi   # could specify covariates here
-      
-      # p and c have 3 dimensions [indiv, secondary, primary]		
-      # will use the largest secondary occasion to determine dimensions and they won't all be used in the data / estimation
-      for(d in 1:max.secondary.occasions){
-        logit(p[i, d, m]) <- mean.p  # could specify covariates here
-        logit(c[i, d, m]) <- mean.c  
-      } #d for days
-    } #m for months
-  } #i for individual
-  
-  
-  #############Likelihood 		
-  # STATE PROCESS
-  for(i in 1:nind){
-    # define latent state at first capture 
-    # dimensions [individual, primary session (month)]
-    z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
+cat("
+    model{
     
-    for(m in  (f[i]+1):n.primary.occasions){  
-      z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
-      mu1[i, m] <- phi[i, m] * z[i, m-1] # this assures that animals stay dead
-      # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
-      # Prob doesn't matter. Changes indexing so just need to keep track of it.
-    } # m
-  } # i
-  
-  # OBSERVATION PROCESS 
-  for(obs in 1:n.obs){   
-    x1 <- which(y[,ind.c]==y[obs,ind.c])
-    idays <- y[x1[which(y[x1, prim.c] == y[obs, prim.c])], second.c] # days (secondary occasions) that individual was caught that month (primary occasion)
-      
-    # if it was caught before in this primary session use c, otherwise p
-    p.eff <- z[y[obs,ind.c], y[obs,prim.c]] * ifelse(any(idays < y[obs,second.c]), c[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]], p[y[obs,ind.c], y[obs,second.c], y[obs,prim.c]])	
-    y[obs,] ~ dbern(p.eff) 		# p.eff is prob of capture
-    # think about p and phi and indexing. need p for each month and one less phi
-# circular because y[obs,] depends on y[obs,...]?
+    ###############Priors and constraints
+    mean.phi ~ dnorm(0, 0.4)T(-10,10)     # prior for mean survival
+    mean.p ~ dnorm(0, 0.4)T(-10,10)       # prior for p
+    mean.c ~ dnorm(0, 0.4)T(-10,10)       # prior for c
     
-  } #obs
-  
-}
-#    ",fill=TRUE)  #####<----------------uncomment this
+    for(i in 1:nind){
+      for(m in f[i]:n.primary.occasions){  
+    
+        # phi has only 2 dimensions [indiv, and primary occasions]
+        logit(phi[i,m]) <- mean.phi   # could specify covariates here
+    
+        # p and c have 3 dimensions [indiv, secondary, primary]		
+        # will use the largest secondary occasion to determine dimensions and they won't all be used in the data / estimation
+        for(d in 1:max.secondary.occasions){
+            logit(p[i, d, m]) <- mean.p  # could specify covariates here
+            logit(c[i, d, m]) <- mean.c  
+        } #d for days
+      } #m for months
+    } #i for individual
+    
+    
+    #############Likelihood 		
+    # STATE PROCESS
+    for(i in 1:nind){
+      # define latent state at first capture 
+      # dimensions [individual, primary session (month)]
+      z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
+      mu1[i,f[i]] <- phi[i,f[i]]
+    
+      for(m in (f[i]+1):n.primary.occasions){  
+        z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
+        mu1[i, m] <- phi[i, m] * z[i, m-1] # this assures that animals stay dead
+        # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
+        # Prob doesn't matter. Changes indexing so just need to keep track of it.
+      } # m
+    } # i
+    
+    # OBSERVATION PROCESS 
+    for(obs in 1:n.obs){   
+    
+      y[obs] ~ dbern(z[id[obs], prim[obs]] * ifelse(p.or.c[obs]==0, p[id[obs], sec[obs], prim[obs]],       c[id[obs], sec[obs], prim[obs]]) ) 		# 0 represents p, 1 represents c (if caught before that       session)
+   
+    } #obs
+    
+  } #model
+",fill=TRUE)  #####<----------------uncomment this
 sink()
-
+#########################################################################################
 
 
 
@@ -231,10 +190,66 @@ known.state.cjs=function(ch){
 }
 
 
+
+################### Do all the data manipulation in R - create vectors
+# and line up all the information and pass to BUGS with bugs.data
+
+#  A hack using a loop to add the primary occassion to the data
+for(i in 1:length(sim.data$observed.month.list)){
+  sim.data$observed.month.list[[i]] <- cbind(data.frame(Prim = i), sim.data$observed.month.list[[i]])
+}
+
+
+obs_dat <- purrr::map_df(
+  sim.data$observed.month.list, 
+  ~ tibble::as_tibble(.x) %>%    #
+    dplyr::mutate(
+      ID = 1:n()
+    ) %>% 
+    tidyr::gather(Sec, State, -Prim, -ID) %>%
+    dplyr::select(ID, Prim, Sec, State)
+)
+
+first_obs <- obs_dat %>% 
+  dplyr::group_by(ID) %>% 
+  dplyr::summarise(f = min(Prim[State == 1]))
+
+#  Subset observation data to observed bits
+y <- dplyr::left_join(obs_dat, first_obs) %>%
+  dplyr::filter(Prim >= f)
+
+
+#### also need a column that indicates whether that individuals
+# has been caught before in that primary occasion (do we use p or c?)
+p.or.c <- numeric()
+for(i in 1:dim(y)[1]){
+  # the times that animal was caught that primary session
+  dat <- y[which(y$Prim==y$Prim[i] & y$ID==y$ID[i] & y$State==1),]
+  
+  if(dim(dat)[1]==0){ # if not caught that primary session at all use p
+    p.or.c[i] <- "p"
+  }else{ # if caught that primary session chose p or c
+    firstcap <- min(as.numeric(dat$Sec))
+    p.or.c[i] <- ifelse(firstcap<y$Sec[i], 1 ,0)   #BUGs doesn't like characters so 0 is p, 1 is c
+  }
+}
+
+y <- data.frame(y,p.or.c)
+
 ##### Bundle data
-bugs.data=list(y=observed.data, f=f, nind=nind, #n.secondary.occasions=n.secondary.occasions, 
-               max.secondary.occasions=max.secondary.occasions, n.primary.occasions=n.primary.occasions, ind.c = which(names(observed.data)=="individual"), prim.c = which(names(observed.data)=="primary"), second.c = which(names(observed.data)=="secondary"),n.obs=dim(observed.data)[1],
-z=known.state.cjs(CH.primary)) 
+bugs.data <- list(
+  y = y$State,
+  prim = y$Prim,
+  sec = y$Sec,
+  id = y$ID,
+  f = first_obs$f, 
+  p.or.c = y$p.or.c,
+  nind = dplyr::n_distinct(y$ID), #n.secondary.occasions=n.secondary.occasions, 
+  max.secondary.occasions = max(y$Sec), 
+  n.primary.occasions = max(y$Prim), 
+  n.obs = nrow(y),
+  z = known.state.cjs(CH.primary)
+) 
 
 
 ###### function to create matrix of initial values for latent state z
@@ -253,7 +268,7 @@ cjs.init.z=function(ch,f){
 }
 
 #initial values
-inits=function(){list(z=cjs.init.z(CH.primary,f),mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))}
+inits=function(){list(z=cjs.init.z(CH.primary,bugs.data$f),mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))}
 
 #parameters monitored
 parameters=c("mean.phi","mean.p","mean.c")
@@ -266,18 +281,20 @@ nc=3
 
 
 
+
 date()
-## Call JAGS from R
+## Call JAGS from R #12 minutes
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
 
+# phi is right on but p estimate high. 
+# p estimated at 0.50 and c at 0.37, but should be 0.3 and 0.4 
 
 #sumarize posteriors
 print(robust.cjs,digits=3) 
 
 
 traceplot(robust.cjs) 
-
 
 
 
