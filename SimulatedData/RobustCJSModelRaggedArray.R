@@ -226,8 +226,8 @@ for(i in 1:dim(y)[1]){
   # the times that animal was caught that primary session
   dat <- y[which(y$Prim==y$Prim[i] & y$ID==y$ID[i] & y$State==1),]
   
-  if(dim(dat)[1]==0){ # if not caught that primary session at all use p
-    p.or.c[i] <- "p"
+  if(dim(dat)[1]==0){ # if not caught that primary session at all use p (0)
+    p.or.c[i] <- 0
   }else{ # if caught that primary session chose p or c
     firstcap <- min(as.numeric(dat$Sec))
     p.or.c[i] <- ifelse(firstcap<y$Sec[i], 1 ,0)   #BUGs doesn't like characters so 0 is p, 1 is c
@@ -287,8 +287,6 @@ date()
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
 
-# phi is right on but p estimate high. 
-# p estimated at 0.50 and c at 0.37, but should be 0.3 and 0.4 
 
 #sumarize posteriors
 print(robust.cjs,digits=3) 
