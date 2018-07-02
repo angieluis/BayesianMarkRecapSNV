@@ -15,7 +15,7 @@ revlogit=function(x){
   exp(x)/(1+exp(x))}
 
 
-# Data format: went back to the list of capture histories (matrices) for each month
+# Data format: list of capture histories (matrices) for each month
 #  each element of the list is a primary occasion (month), and the matrix is i by d (rows are individuals and columns are secondary occasions- days)
 # each month contains all animals in dataset (not just those caught that month)
 
@@ -183,13 +183,13 @@ known.state.cjs=function(ch){
 # and line up all the information and pass to BUGS with bugs.data
 
 #  A hack using a loop to add the primary occassion to the data
-for(i in 1:length(sim.data$observed.month.list)){
-  sim.data$observed.month.list[[i]] <- cbind(data.frame(Prim = i), sim.data$observed.month.list[[i]])
+for(i in 1:length(CH.secondary)){
+  CH.secondary[[i]] <- cbind(data.frame(Prim = i), CH.secondary[[i]])
 }
 
 
 obs_dat <- purrr::map_df(
-  sim.data$observed.month.list, 
+  CH.secondary, 
   ~ tibble::as_tibble(.x) %>%    #
     dplyr::mutate(
       ID = 1:n()
@@ -207,7 +207,7 @@ y <- dplyr::left_join(obs_dat, first_obs) %>%
   dplyr::filter(Prim >= f)
 
 
-#### also need a column that indicates whether that individuals
+#### also need a column that indicates whether that individual
 # has been caught before in that primary occasion (do we use p or c?)
 p.or.c <- numeric()
 for(i in 1:dim(y)[1]){
@@ -216,7 +216,7 @@ for(i in 1:dim(y)[1]){
   
   if(dim(dat)[1]==0){ # if not caught that primary session at all use p (0)
     p.or.c[i] <- 0
-  }else{ # if caught that primary session chose p or c
+  }else{ #  otherwise use p (0) unless already caught caught that session, then use c (1)
     firstcap <- min(as.numeric(dat$Sec))
     p.or.c[i] <- ifelse(firstcap<y$Sec[i], 1 ,0)   #BUGs doesn't like characters so 0 is p, 1 is c
   }
@@ -262,9 +262,9 @@ inits=function(){list(z=cjs.init.z(CH.primary,bugs.data$f),mean.phi=runif(1,0,1)
 parameters=c("mean.phi","mean.p","mean.c")
 
 #MCMCsettings
-ni=1000
+ni=10000
 nt=6
-nb=500
+nb=5000
 nc=3
 
 
@@ -275,6 +275,7 @@ date()
 robust.cjs=jags(bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=nc,n.thin=nt,n.iter=ni,n.burnin=nb)
 date() #tell how long it ran
 
+# estimating both p and c at 0.4 (p should be 0.3)
 
 #sumarize posteriors
 print(robust.cjs,digits=3) 
