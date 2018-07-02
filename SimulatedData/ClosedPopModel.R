@@ -333,4 +333,4 @@ print(out, dig = 3)
 hist(out$BUGSoutput$sims.list$N, nclass = 40, col = "gray", main = "", xlab = "Population size", las = 1, xlim = c(150, 300))
 abline(v= data$C, col = "black", lwd = 3)
 
-### quite often  overestimates
+### quite often  overestimates N at about 215-220 (should be 200)
