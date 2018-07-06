@@ -1,6 +1,7 @@
 #########################################################################################
 #
 # Estimation of survival, recruitment and population size using the Jolly-Seber model (multi-state formulation)
+## Robust design with data as ragged array
 # 
 ##########################################################################################
 library(R2jags)
@@ -148,7 +149,7 @@ cat("
     # Priors and constraints
     mean.phi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean survival
     mean.p ~ dnorm(0, 0.4)T(-10,10)      # Prior for mean capture
-    mean.c ~ dnorm(0, 0.4)T(-10,10)      #  prior for mean recapture
+    # mean.c ~ dnorm(0, 0.4)T(-10,10)      #  prior for mean recapture # not using now
     
     
     for (m in 1:n.primary.occasions){
@@ -160,11 +161,15 @@ cat("
         # phi has 2 dimensions [indiv, and primary occasions]
         logit(phi[i,m]) <- mean.phi
         
-        # p and c could have 3 dimensions [indiv, secondary, primary]	, see JolySeberAsMultistate.R for example
-        # but here I am not allowing that (can't vary within each primary session, e.g., by daily weather)
+        # p and c could have 3 dimensions [indiv, secondary, primary], 
+        # see JolySeberAsMultistate.R for example, but here I am not allowing that 
+        # (can't vary within each primary session, e.g., by daily weather)
+        # to add c, need to make 3 dimensions then make a p.eff that chooses 
+        # between p and c for each indiv each time. but if it needs a loop, 
+        # it will make it really slow 
         
         logit(p[i, m]) <- mean.p  # could specify covariates here
-        logit(c[i, m]) <- mean.c  
+        # logit(c[i, m]) <- mean.c  # not using this right now
       } #i for individual 
     } #m for months
     
@@ -188,7 +193,7 @@ cat("
         # Define probabilities of O(t) given S(t)
         po[1,i,m,1] <- 0            # prob of capture if not yet alive =0
         po[1,i,m,2] <- 1            # prob of not capture if not yet alive =1
-        po[2,i,m,1] <- p[i,m]         # prob of capture if alive
+        po[2,i,m,1] <- p[i,m]         # prob of capture if alive # change to p.eff
         po[2,i,m,2] <- 1-p[i,m]       # prob of not capturing
         po[3,i,m,1] <- 0            # prob of capture if dead = 0 
         po[3,i,m,2] <- 1            # prob of not capturing if dead =1
@@ -312,7 +317,7 @@ y <- data.frame(y,p.or.c)
 # Bundle data
 jags.data <- list(
   n.primary.occasions = max(y$Prim), 
-  max.secondary.occasions = max(y$Sec), 
+  # max.secondary.occasions = max(y$Sec), 
   nind = dplyr::n_distinct(y$ID), # number of individuals (rows) including real and augmented
   y =  y$Observation, # Observation of animal (1 seen, 2 not seen)
   prim = y$Prim, # primary occasion
@@ -348,11 +353,18 @@ js.multistate.init <- function(ch, nz){
   return(state)
 } 
 
-inits <- function(){list(mean.phi = runif(1, 0, 1), mean.p = runif(1, 0, 1), mean.c = runif(1, 0, 1), z = js.multistate.init(CH.primary.du, nz))}    
+inits <- function(){list(mean.phi = runif(1, 0, 1), 
+                         mean.p = runif(1, 0, 1), 
+                         # mean.c = runif(1, 0, 1), 
+                         z = js.multistate.init(CH.primary.du, nz))}    
 
 
 # Parameters monitored
-parameters <- c("mean.p", "mean.c","mean.phi", "b", "Nsuper", "N", "B", "f")
+parameters <- c(
+  "mean.p", 
+  # "mean.c",
+  "mean.phi", 
+  "b", "Nsuper", "N", "B", "f")
 
 # MCMC settings
 ni <- 20000
@@ -368,8 +380,6 @@ date() # took 1.5 hours, uh oh. slow because not specifying known state?
 
 
 #working
-# not using variables: max.secondary.occasions, sec because not letting any variables vary between secondary occasions within primary occasions right now
-# also not using p.or.c right now- need to change so can
 
 print(js.rd.ms, digits = 3)
 
