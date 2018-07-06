@@ -233,10 +233,10 @@ nc <- 3
 
 date()
 js.ms <- jags(jags.data, inits, parameters, "js-ms.jags", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
-date() # took 1.5 hours, uh oh
+date() #working # took 1.5 hours, uh oh
+# is it slow because no known-state function?
 
-#working
 
 print(js.ms, digits = 3)
 
-### Do I ignore the first time step in the output because it was added? OR this that already removed? (Seems to be already removed from some of the output)
+### Do I ignore the first time step in the output because it was added? OR is that already removed? (Seems to be already removed from some of the output)
