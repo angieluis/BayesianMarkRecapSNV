@@ -2,7 +2,7 @@
 #
 # Estimation of survival, recruitment and population size using the Jolly-Seber model (multi-state formulation)
 ## Robust design with data as ragged array
-# 
+#
 ##########################################################################################
 library(R2jags)
 library(dplyr)
@@ -36,7 +36,7 @@ n.states <- 4           # states: not yet entered, S, I, & dead
 n.obs <- 3              # observed as S, I or not observed
 
 # Define matrices with survival, transition and recapture probabilities
-# These are 4-dimensional matrices, with 
+# These are 4-dimensional matrices, with
 # Dimension 1: state at time t
 # Dimension 2: state at time t+1
 # Dimension 3: individual
@@ -47,17 +47,17 @@ PSI.STATE <- array(NA, dim=c(n.states, n.states, N, n.prim.occasions)) # a trans
 for (i in 1:N){
   for (t in 1:(n.prim.occasions)){
     PSI.STATE[,,i,t] <- matrix(c(
-      1-gammaS[t]-gammaI[t], gammaS[t],            gammaI[t],         0, 
+      1-gammaS[t]-gammaI[t], gammaS[t],            gammaI[t],         0,
       0,                     phiS[t]*(1-psiSI[t]), phiS[t]*psiSI[t],  1-phiS[t],
       0,                     0,                    phiI[t],           1-phiI[t],
-      0,                     0,                    0,                 1       ), 
+      0,                     0,                    0,                 1       ),
       nrow = n.states, byrow = TRUE)
   } #t
 } #i
 
 # 2.Observation process matrix
 PSI.OBS <- array(NA, dim=c(n.states, n.obs, N, n.prim.occasions))
-for (i in 1:N){              
+for (i in 1:N){
   for (t in 1:(n.prim.occasions)){
     PSI.OBS[,,i,t] <- matrix(c(
       #seen in S, I, not seen
@@ -80,44 +80,44 @@ simJSRDMS <- function(PSI.STATE, PSI.OBS, N, n.prim.occasions, n.sec.occasions){
   for (i in 1:N){
     # Define latent state at first occasion
     z[i,1] <- 1   # No one has entered yet (state 1) at t=1 (remove this later)
-    
+
     for (m in 2:(n.prim.occasions+1)){
       # State process: draw S(t) given S(t-1)
       z[i,m] <- sum(rmultinom(1,1,PSI.STATE[z[i,m-1], ,i, m-1]) *1:4)
-      
+
     } #m
   } #i
-  
-  # OBSERVATION PROCESS 
+
+  # OBSERVATION PROCESS
   # draw O(t) given S(t)
   for(m in 2:(n.prim.occasions+1)){ #  get rid of dummy occasion
     ym <- matrix(0, nrow=N, ncol=n.sec.occasions[m-1])
     for(i in 1:N){
-    
+
       ym[i,] <- colSums(rmultinom(n.sec.occasions[m-1],1, PSI.OBS[z[i,m], ,i,m-1]) * 1:3)
     } #i
     y[[m-1]] <- ym
   } # m
-  
- 
+
+
   # Remove individuals never captured
-  
-  
+
+
   y2 <- lapply(y,function(x){replace(x,x==3,0)})
   z2 <- replace(z,z==1|z==4,0)
   z2 <- replace(z2,z2==2|z2==3,1)
-   
+
   cap.sum <-  rowSums(matrix(unlist(lapply(y2,rowSums)),nrow=N,ncol=n.prim.occasions,byrow=FALSE))
   never <- which(cap.sum == 0)
   CH.sec <- lapply(y,function(x){x[-never,]})
   Nt <- colSums(z2)    # Actual population size
-  
-  return(list(true.state=z[,-1], true.N=Nt[-1], observed.month.list=CH.sec))	
-  
-}  
-  
-  
-  
+
+  return(list(true.state=z[,-1], true.N=Nt[-1], observed.month.list=CH.sec))
+
+}
+
+
+
 # Execute simulation function
 sim <- simJSRDMS(PSI.STATE, PSI.OBS, N, n.prim.occasions, n.sec.occasions)
 
@@ -132,7 +132,7 @@ CH.secondary <- sim$observed.month.list
 # create a primary CH from the secondary capture history:
 x <- lapply(CH.secondary,function(x){apply(x,1,min)})
 v1 <- unlist(x)
-CH.primary <- matrix(v1, nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
+CH.primary <- matrix(v1, nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary))
 
 #  Analysis of the JS model as a multistate robust design model
 # Add dummy occasion
@@ -146,15 +146,12 @@ CH.secondary.ms <- lapply(CH.secondary.du,function(x){rbind(x,matrix(3, ncol = d
 
 
 
-#####################################################
-
-
 # The JS model as a multistate Robust Design model
 # Specify model in BUGS language
 sink("js-rd-ms-inf.jags")
 cat("
     model {
-    
+
     # -------------------------------------------------
     # Parameters:
     # phiS: survival probability of susceptible (S)
@@ -163,7 +160,7 @@ cat("
     #     can't go from I to S
     # pS: recapture probability as S
     # pI: recapture probability as I      # eventually put in c for S and I
-    # gammaS: prob of entry into S class 
+    # gammaS: prob of entry into S class
     # gammaI: prob of entry into I class (infected immigration)
     # -------------------------------------------------
     # States (S):
@@ -171,12 +168,19 @@ cat("
     # 2 alive as S
     # 3 alive as I
     # 4 dead
-    # Observations (O):  
-    # 1 seen as S 
+    # Observations (O):
+    # 1 seen as S
     # 2 seen as I
     # 3 not seen
     # -------------------------------------------------
-    
+
+    mean.psi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean transition from S to I
+
+    for (u in 1:2){     #for both states
+      mean.phi[u] ~ dnorm(0, 0.4)T(-10,10)    # Priors for mean state-spec. survival
+      mean.p[u] ~ dnorm(0, 0.4)T(-10,10)      # Priors for mean state-spec. recapture
+    }
+
     # Priors and constraints
     for (t in 1:(n.primary.occasions-1)){
       logit(phiS[t]) <- mean.phi[1]
@@ -184,18 +188,12 @@ cat("
       logit(psiSI[t]) <- mean.psi
       logit(pS[t]) <- mean.p[1]
       logit(pI[t]) <- mean.p[2]
-      gammaS[t] ~ dunif(0, 1) 
-      gammaI[t] ~ dunif(0, 1) 
+      gammaS[t] ~ dunif(0, 1)
+      gammaI[t] ~ dunif(0, 1)
     }
-    
-    for (u in 1:2){     #for both states
-      mean.phi[u] ~ dnorm(0, 0.4)T(-10,10)    # Priors for mean state-spec. survival
-      mean.p[u] ~ dnorm(0, 0.4)T(-10,10)      # Priors for mean state-spec. recapture
-    }
-    mean.psi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean transition from S to I
-    
+
     # Define state-transition and observation matrices
-    for (i in 1:nind){  
+    for (i in 1:nind){
       # Define probabilities of State(t+1) given State(t)
       for (t in 1:(n.primary.occasions-1)){
         ### for proper process model, here say psiSI[t]<-beta*I[t] and define beta in priors instead of psiSI. Need to calculate I with robust design.
@@ -215,17 +213,17 @@ cat("
         ps[4,i,t,2] <- 0                      # dead to S
         ps[4,i,t,3] <- 0                      # dead to I
         ps[4,i,t,4] <- 1                      # dead stay dead
-    
+
         # Define probabilities of Observation(t) given State(t)
         # first index is state, last index is observation
-        # need to add p or c 
+        # need to add p or c
         # could potentially include observation as wrong state (false neg or pos)
         po[1,i,t,1] <- 0        # not yet entered and observed as S
         po[1,i,t,2] <- 0        # not yet entered and observed as I
         po[1,i,t,3] <- 1        # not yet entered and not observed
         po[2,i,t,1] <- pS[t]    # in S and observed as S
-        po[2,i,t,2] <- 0        # in S and observed as I 
-        po[2,i,t,3] <- 1-pS[t]  # in S and not observed 
+        po[2,i,t,2] <- 0        # in S and observed as I
+        po[2,i,t,3] <- 1-pS[t]  # in S and not observed
         po[3,i,t,1] <- 0        # in I and observed as S
         po[3,i,t,2] <- pI[t]    # in I and observed as I
         po[3,i,t,3] <- 1-pI[t]  # in I and not observed
@@ -234,8 +232,8 @@ cat("
         po[4,i,t,3] <- 1        # dead and not observed
       } #t
     } #i
-    
-    ############### Likelihood 
+
+    ############### Likelihood
     # STATE PROCESS
     for (i in 1:nind){
       # Define latent state at first occasion
@@ -245,16 +243,16 @@ cat("
       for (m in 2:n.primary.occasions){
         # State process: draw S(t) given S(t-1)
         z[i,m] ~ dcat(ps[z[i,m-1], i, m-1,])
-        
+
       } #m
     } #i
 
-    # OBSERVATION PROCESS 
+    # OBSERVATION PROCESS
     # draw O(t) given S(t)
-    for(obs in 1:n.obs){   
-    
-      y[obs] ~ dcat(po[z[id[obs], prim[obs]], id[obs], prim[obs]-1,]) 
-    
+    for(obs in 1:n.obs){
+
+      y[obs] ~ dcat(po[z[id[obs], prim[obs]], id[obs], prim[obs]-1,])
+
     } #obs
 
 
@@ -268,9 +266,9 @@ cat("
     } #t
     psi <- sum(cprob[])            # Inclusion probability
     for (t in 1:(n.primary.occasions-1)){
-      b[t] <- cprob[t] / psi      # Entry probability
+      b[t] <- (cprob[t] + 0.001) / (psi + 0.001)      # Entry probability
     } #t
-    
+
     for (i in 1:nind){
       for (t in 2:n.primary.occasions){
         Ss[i,t-1] <- equals(z[i,t], 2) #
@@ -279,13 +277,13 @@ cat("
         Is[i,t-1] <- equals(z[i,t], 3)
       } #t
       for (t in 1:(n.primary.occasions-1)){
-        dS[i,t] <- equals(z[i,t]-Ss[i,t],0) 
+        dS[i,t] <- equals(z[i,t]-Ss[i,t],0)
         dI[i,t] <- equals(z[i,t]-Is[i,t],0)
-      } #t   
+      } #t
       aliveS[i] <- sum(Ss[i,])
       aliveI[i] <- sum(Is[i,])
     } #i
-    
+
     for (t in 1:(n.primary.occasions-1)){
       S[t]  <- sum(Ss[,t])       # Actual population size of S
       I[t]  <- sum(Is[,t])       # Actual pop size of I
@@ -293,9 +291,9 @@ cat("
       BS[t] <- sum(dS[,t])       # Number of S entries
       BI[t] <- sum(dI[,t])       # Number of I entries
       B[t]  <- BS[t] + BI[t]     # total number of entries
-      fS[t] <- BS[t]/N[t]        # per capita recruitment rate of S
-      fI[t] <- BI[t]/N[t]        # per capita recruitment rate of I
-      f[t]  <- B[t]/N[t]         # total per capita recruitment rate 
+      fS[t] <- (BS[t] + 0.001)/(N[t] + 0.001)# per capita recruitment rate of S
+      fI[t] <- (BI[t] + 0.001)/(N[t] + 0.001)        # per capita recruitment rate of I
+      f[t]  <- (B[t] + 0.001)/(N[t] + 0.001)         # total per capita recruitment rate
     } #t
     for (i in 1:nind){
       w[i] <- 1-equals(aliveS[i],0)-equals(aliveI[i],0)
@@ -307,13 +305,14 @@ cat("
 sink()
 
 
+
 ######################
 
-# Function to create known latent states z 
+# Function to create known latent states z
 ### fill in all known but unobserved states (can't go back to S from I)
-#If observed as I, then not seen, and seen again later, when not seen must have been I. 
+#If observed as I, then not seen, and seen again later, when not seen must have been I.
 #If observed as S, not seen, then observed as S again, then must be S.
-# Remember these are now states not observations, so coded differently. 
+# Remember these are now states not observations, so coded differently.
 # 1 is not yet entered
 # 2 is S
 # 3 is I
@@ -321,7 +320,7 @@ sink()
 # only able to fill in 2's and 3's
 # Allows us to fill in a lot. And should speed up computation time
 known.state.SImsJS <- function(ms=CH.primary.ms, notseen=3){ # ms is multistate capture history
-  # notseen: label for 'not seen' #here is 3 
+  # notseen: label for 'not seen' #here is 3
   state <- ms
   state[state==notseen] <- NA
   for(i in 1:dim(ms)[1]){
@@ -351,11 +350,11 @@ for(i in 1:length(CH.secondary.ms)){
 
 
 obs_dat <- purrr::map_df(
-  CH.secondary.ms, 
+  CH.secondary.ms,
   ~ tibble::as_tibble(.x) %>%    #
     dplyr::mutate(
       ID = 1:n()
-    ) %>% 
+    ) %>%
     tidyr::gather(Sec, Observation, -Prim, -ID) %>%
     dplyr::select(ID, Prim, Sec, Observation)
 )
@@ -367,11 +366,11 @@ y <- obs_dat[which(obs_dat$Prim>1),]
 
 #### also need a column that indicates whether that individual
 # has been caught before in that primary occasion (do we use p or c?)
-p.or.c <- numeric()  
+p.or.c <- numeric()
 for(i in 1:dim(y)[1]){
   # the times that animal was caught that primary session
   dat <- y[which(y$Prim==y$Prim[i] & y$ID==y$ID[i] & (y$Observation==1|y$Observation==2)),]
-  
+
   if(dim(dat)[1]==0){ # if not caught that primary session at all use p (0)
     p.or.c[i] <- 0
   }else{ #  otherwise use p (0) unless already caught caught that session, then use c (1)
@@ -385,8 +384,8 @@ y <- data.frame(y,p.or.c)
 
 # Bundle data
 jags.data <- list(
-  n.primary.occasions = max(y$Prim), 
-  # max.secondary.occasions = max(y$Sec), 
+  n.primary.occasions = max(y$Prim),
+  # max.secondary.occasions = max(y$Sec),
   nind = dplyr::n_distinct(y$ID), # number of individuals (rows) including real and augmented
   y =  y$Observation, # Observation of animal (1 seen as S, 2 seen as I, 3 not seen)
   prim = y$Prim, # primary occasion
@@ -398,18 +397,18 @@ jags.data <- list(
 )
 
 # Specify initial values
-jsmsinf.init <- function(ch=CH.primary.ms, nz){ 
+jsmsinf.init <- function(ch=CH.primary.ms, nz){
   # ch is primary capture histories after augmentation
   # nz is number of rows added for augmentation
 
   kn.state <- known.state.SImsJS(ms=ch)
-  state <- matrix(2,nrow=dim(ch)[1],ncol=dim(ch)[2]) # default is S (2)
+  state <- matrix(2, nrow=dim(ch)[1], ncol=dim(ch)[2]) # default is S (2)
   state <- replace(state,!is.na(kn.state),NA)
 
   for(i in 1:(dim(state)[1]-nz)){
     f <- min(which(is.na(state[i,])))       # before ever caught
     if(f>1){state[i,1:(f-1)] <- 2}              # tried both 1 and 2 here, still get errors
-    if(length(which(kn.state[i,]==3))>0){
+    if(length(which(kn.state[i,] == 3)) > 0){
       maxI <- max(which(kn.state[i,]==3))
       if(maxI<dim(state)[2] ){
         state[i,(maxI+1):dim(state)[2]] <- 3 # all after caught as I are I (3)
@@ -419,20 +418,22 @@ jsmsinf.init <- function(ch=CH.primary.ms, nz){
   state[(dim(state)[1]-nz+1):dim(state)[1],] <- 1
   state[,1] <- NA #this is specified in likelihood
   return(state)
-}  
-  
-  
+}
 
-inits <- function(){list(mean.phi = runif(2, 0, 1), 
-                         mean.p = runif(2, 0, 1), 
+
+
+inits <- function(){list(mean.phi = runif(2, 0, 1),
+                         mean.p = runif(2, 0, 1),
                          mean.psi = runif(1, 0, 1),
-                         # mean.c = runif(2, 0, 1), 
-                         z = jsmsinf.init(CH.primary.ms, nz))}    
+                         # mean.c = runif(2, 0, 1),
+                         gammaS = rep(0.01, length(unique(y$Prim))),
+                         gammaI = rep(0.01, length(unique(y$Prim))),
+                         z = jsmsinf.init(CH.primary.ms, nz))}
 
 
 # Parameters monitored
 parameters <- c(
-  "mean.p", 
+  "mean.p",
   # "mean.c",
   "mean.phi",
   "mean.psi",
@@ -447,10 +448,10 @@ nc <- 3
 
 date()
 js.rd.ms.inf <- jags(jags.data, inits, parameters, "js-rd-ms-inf.jags", n.chains = nc, n.thin = nt, n.iter = ni, n.burnin = nb, working.directory = getwd())
-date() 
- 
-#Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  : 
-#Error in node z[2,3] 
+date()
+
+#Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  :
+#Error in node z[2,3]
 #Node inconsistent with parents
 
 # or z[373,3]
