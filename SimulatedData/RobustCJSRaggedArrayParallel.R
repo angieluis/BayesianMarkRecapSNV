@@ -140,13 +140,14 @@ cat("
       # define latent state at first capture 
       # dimensions [individual, primary session (month)]
       z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
-      mu1[i,f[i]] <- phi[i,f[i]]
+      mu1[i,f[i]] <- phi[i,f[i]] # if f=1, then could be referring to phi at time 1?
     
       for(m in (f[i]+1):n.primary.occasions){  
         z[i, m] ~ dbern(mu1[i, m]) 		#mu1 is probability alive
         mu1[i, m] <- phi[i, m] * z[i, m-1] # this assures that animals stay dead
         # Lukacs lab code has phi[i,m]. Book has phi[i,m-1]. Which one is right? 
         # Prob doesn't matter. Changes indexing so just need to keep track of it.
+        # But in the simulate data code above I said phi[i,m-1] 
       } # m
     } # i
     
@@ -254,19 +255,20 @@ bugs.data <- list(
   n.primary.occasions = max(y$Prim), 
   n.obs = nrow(y),
   z = known.state.cjs(CH.primary),
-  cjs.init.z=cjs.init.z
+  cjs.init.z=cjs.init.z,
+  CH.primary=CH.primary
 ) 
 
 #initial values
-inits=function(){list(z=cjs.init.z(CH.primary,bugs.data$f),mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))}
+inits=function(){list(z=cjs.init.z(CH.primary,f),mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))} # had to change from bugs.data$f to f
 
 #parameters monitored
 parameters=c("mean.phi","mean.p","mean.c")
 
 #MCMCsettings
-ni=10000
+ni=1000
 nt=6
-nb=5000
+nb=500
 nc=3
 
 
@@ -279,14 +281,12 @@ nc=3
 
 
 date()
-## Call JAGS from R #12 minutes
-robust.cjs=jags.parallel(bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() #tell how long it ran
+## 
+robust.cjs=jags.parallel(data=bugs.data,inits,parameters,"robust_cjs_raggedarray.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 6 min
 
 
-#sumarize posteriors
 print(robust.cjs,digits=3) 
-
 
 traceplot(robust.cjs) 
 
