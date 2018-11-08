@@ -67,3 +67,4 @@ library(lubridate)
 
 month <- factor(month(first.dates))
 
+temporal.covariates <- data.frame(session=1:length(Session.days),month)

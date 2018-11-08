@@ -14,7 +14,8 @@ library(dplyr)
 setwd("~/Documents/JAGS/BayesianMarkRecapSNV/RealData")
 
 source("RobustCJSfunctions.R")
-
+load("Z2pemaCH.RData")
+#load("Z2temporalcovariates.RData")
 
 CH.secondary <- Z2.pema.Ch.secondary
 CH.primary <- primary.ch.fun(CH.secondary)
@@ -84,7 +85,8 @@ bugs.data <- list(
   n.obs = nrow(y),
   z = known.state.cjs(CH.primary),
   cjs.init.z=cjs.init.z,
-  CH.primary=CH.primary
+  CH.primary=CH.primary,
+  month = temporal.covariates$month
 ) 
 
 #initial values
@@ -99,7 +101,19 @@ Z2.rcjs.all.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_p
 date() # 51 min
 
 
-print(Z2.rcjs.all.constant,digits=3) d
+
+
+date()
+Z2.rcjs.all.constant2=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dot_p_dot_c_dot.bug2",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 51 min
+
+
+date()
+Z2.rcjs.all.constant2=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_month_p_dot_c_dot.bug2",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 51 min
+
+
+print(Z2.rcjs.all.constant,digits=3) 
 
 revlogit(Z2.rcjs.all.constant$BUGSoutput$summary[2:4,1])
 
