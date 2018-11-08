@@ -68,3 +68,5 @@ library(lubridate)
 month <- factor(month(first.dates))
 
 temporal.covariates <- data.frame(session=1:length(Session.days),month)
+
+save(Z2.pema.Ch.secondary,Session.days,temporal.covariates,Z2.primary.time.int.weeks,file="Z2pemaCH.RData")

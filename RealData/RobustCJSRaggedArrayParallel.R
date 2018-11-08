@@ -12,6 +12,7 @@ library(R2jags)
 library(tidyr)
 library(dplyr)
 setwd("~/Documents/JAGS/BayesianMarkRecapSNV/RealData")
+#setwd("~/BayesianMarkRecapSNV/RealData")  # for PC
 
 source("RobustCJSfunctions.R")
 load("Z2pemaCH.RData")
@@ -105,12 +106,12 @@ date() # 51 min
 
 date()
 Z2.rcjs.all.constant2=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dot_p_dot_c_dot.bug2",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # 51 min
+date() # 
 
 
 date()
-Z2.rcjs.all.constant2=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_month_p_dot_c_dot.bug2",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # 51 min
+Z2.rcjs.phi.month.p.dot.c.dot=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_month_p_dot_c_dot.bug2",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 
 
 
 print(Z2.rcjs.all.constant,digits=3) 
