@@ -10,8 +10,8 @@ cat("
     model{
     
     ###############Priors and constraints
-    for(m in 1:12){
-      month.phi[m] ~ dnorm(0, 0.4)T(-10,10)     # prior for mean survival
+    for(u in 1:12){
+      mean.phi[u] ~ dnorm(0, 0.4)T(-10,10)     # priors for monthly survival
     }
     mean.p ~ dnorm(0, 0.4)T(-10,10)       # prior for p
     mean.c ~ dnorm(0, 0.4)T(-10,10)       # prior for c
@@ -19,7 +19,7 @@ cat("
     for(i in 1:nind){
       for(m in 1:(n.primary.occasions-1)){  
         # phi has only 2 dimensions [indiv, and primary occasions]
-        logit(phi[i,m]) <- month.phi[month[m]]   # could specify covariates here
+        logit(phi[i,m]) <- mean.phi[month[m]]   # could specify covariates here
             # this is weekly survival. 
             # Below converted to survival over whole primary period (usually 4-5 weeks).
             # For time-varying covariate when months weren't sampled need to put in 

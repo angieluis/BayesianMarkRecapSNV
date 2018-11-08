@@ -91,7 +91,7 @@ bugs.data <- list(
 ) 
 
 #initial values
-inits=function(){list(z=cjs.init.z(CH.primary,f),mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))} 
+inits=function(){list(z=cjs.init.z(CH.primary,f),mean.phi=runif(12,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))} 
 
 #parameters monitored
 parameters=c("mean.phi","mean.p","mean.c")
@@ -106,15 +106,15 @@ date() # 51 min
 
 date()
 Z2.rcjs.all.constant2=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dot_p_dot_c_dot2.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # 50 min
+date() # 
 
 
 date()
 Z2.rcjs.phi.month.p.dot.c.dot=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_month_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # 
+date() #  48 min 
 
 
-print(Z2.rcjs.all.constant,digits=3) 
+print(Z2.rcjs.phi.month.p.dot.c.dot,digits=3) 
 
 revlogit(Z2.rcjs.all.constant$BUGSoutput$summary[2:4,1])
 
