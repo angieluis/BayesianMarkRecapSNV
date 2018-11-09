@@ -164,7 +164,9 @@ inits=function(){list(z=cjs.init.z(CH.primary,f),alpha0=runif(1,0,1),alpha1=runi
 parameters=c("alpha0","alpha1","mean.p","mean.c")
 
 date()
-Z2.rcjs.phi.dummyx.p.dot.c.dot=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dummyx_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+Z2.rcjs.phi.dummyx.p.dot.c.dot=jags.parallel(data=bugs.data,inits=inits,parameters.to.save=parameters,
+        model.file="robust_CJS_phi_dummyx_p_dot_c_dot.bug",n.chains=3,n.thin=6,
+        n.iter=10000,n.burnin=5000)
 date() #  
 
 
