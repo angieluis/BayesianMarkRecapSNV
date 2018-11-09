@@ -2,7 +2,6 @@
 
 # Model assuming phi, p and c are a function of month (factors so 1 estimate per month for each)
 
-# This ignores p and c for first capture occasion. So both phi and p vectors are of length of primary sessions minus one. Gets put back in if using Jolly Seber and estimating N.
 
 #################################specify model in BUGS language
 sink("robust_CJS_phi_month_p_month_c_month.bug")
