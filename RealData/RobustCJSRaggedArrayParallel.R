@@ -116,10 +116,26 @@ date() #  48 min
 
 print(Z2.rcjs.phi.month.p.dot.c.dot,digits=3) 
 
-revlogit(Z2.rcjs.all.constant$BUGSoutput$summary[2:4,1])
-
-traceplot(Z2.rcjs.all.constant) 
-
+revlogit(Z2.rcjs.phi.month.p.dot.c.dot$BUGSoutput$mean$mean.phi)
+#traceplot(Z2.rcjs.all.constant) 
 
 
+inits.m=function(){list(z=cjs.init.z(CH.primary,f),mean.phi=runif(12,0,1),mean.p=runif(12,0,1),mean.c=runif(12,0,1))} 
 
+date()
+Z2.rcjs.phi.month.p.month.c.month=jags.parallel(data=bugs.data,inits.m,parameters,"robust_CJS_phi_month_p_month_c_month.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() #   55 min
+
+
+
+mod.names <- objects()[grep("Z2.rcjs.",objects())]
+mod.list <- list()
+mod.table <- data.frame(model=mod.names,npar=rep(NA,length(mod.names)),
+                        DIC=rep(NA,length(mod.names)))
+for(i in 1:length(mod.names)){
+  mod.list[[i]]<- get(mod.names[i]) 
+  mod.table$DIC[i] <- mod.list[[i]]$BUGSoutput$DIC
+  mod.table$npar[i] <- dim(mod.list[[i]]$BUGSoutput$summary)[1]-1
+}
+mod.table <- mod.table[order(mod.table$DIC),]
+mod.table$delta.DIC <- mod.table$DIC-min(mod.table$DIC)
