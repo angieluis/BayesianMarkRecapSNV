@@ -128,6 +128,52 @@ date() #   55 min
 
 
 
+### add dummy time-varying covariate (repeat observed seasonality)
+x <- revlogit(Z2.rcjs.phi.month.p.month.c.month$BUGSoutput$mean$mean.phi)
+dummy.phix <- rep(NA,dim(temporal.covariates)[1])
+for(t in 1:dim(temporal.covariates)[1]){
+  dummy.phix[t] <- x[temporal.covariates$month[t]]
+}
+temporal.covariates$dummy.phix <- dummy.phix  
+  
+
+##### Bundle data
+bugs.data <- list(
+  y = y$State,
+  prim = y$Prim,
+  sec = y$Sec,
+  id = y$ID,
+  f = first_obs$f, 
+  p.or.c = y$p.or.c,
+  nind = dplyr::n_distinct(y$ID), #n.secondary.occasions=n.secondary.occasions, 
+  max.secondary.occasions = max(y$Sec), 
+  n.primary.occasions = max(y$Prim), 
+  time.int = time.int,
+  n.obs = nrow(y),
+  z = known.state.cjs(CH.primary),
+  cjs.init.z=cjs.init.z,
+  CH.primary=CH.primary,
+  month = temporal.covariates$month,
+  dummy.phix <- temporal.covariates$dummy.phix
+) 
+
+#initial values
+inits=function(){list(z=cjs.init.z(CH.primary,f),alpha0=runif(1,0,1),alpha1=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1))} 
+
+#parameters monitored
+parameters=c("alpha0","alpha1","mean.p","mean.c")
+
+date()
+Z2.rcjs.phi.dummyx.p.dot.c.dot=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dummyx_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() #  
+
+
+
+
+
+###############################################################################
+### Model Comparisons
+###############################################################################
 mod.names <- objects()[grep("Z2.rcjs.",objects())]
 mod.list <- list()
 mod.table <- data.frame(model=mod.names,npar=rep(NA,length(mod.names)),
