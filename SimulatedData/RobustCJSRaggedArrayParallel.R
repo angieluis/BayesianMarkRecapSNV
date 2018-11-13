@@ -101,12 +101,17 @@ sim.data=simul.cjs.rb(PHI, P, C, marked, n.sec.occasions)
 # end simulating data 
 ######################################################################################
 
-CH.secondary <- sim.data$observed.month.list
+# function to create primary CH from secondary list
+primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices 
 
-# create a primary CH from the secondary capture history:
-x <- lapply(CH.secondary,rowSums)
-v1 <- unlist(x)
-CH.primary <- matrix(replace(v1, v1>1, 1), nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
+  x <- lapply(CH.secondary,rowSums)
+  v1 <- unlist(x)
+  CH.primary <- matrix(replace(v1, v1>1, 1), nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
+
+  return(CH.primary)
+}
+
+CH.primary <- primary.ch.fun(CH.secondary)
 
 ####################################################specify model in BUGS language
 sink("robust_cjs_raggedarray.bug")

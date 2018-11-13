@@ -62,11 +62,9 @@ Z2.pema.Ch.secondary <- Ch.list
   
   
 ####### Temporal Covariates 
-# month
-library(lubridate)
 
-month <- factor(month(first.dates))
+source("TemporalCovariateFunction.R")
+temporal.covariates <- temporaldata.fun(data=UNMcaptures, site="Zuni",web=2)
 
-temporal.covariates <- data.frame(session=1:length(Session.days),month)
 
 save(Z2.pema.Ch.secondary,Session.days,temporal.covariates,Z2.primary.time.int.weeks,file="Z2pemaCH.RData")
