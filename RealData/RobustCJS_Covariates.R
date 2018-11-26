@@ -101,7 +101,7 @@ parameters=c("mean.phi","mean.p","mean.c")
 
 
 date()
-Z2.rcjs.phi.month.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_dot_p_dot_c_dot2.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+Z2.rcjs.phi.month.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_phi_month_p_dot_c_dot2.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # 
 
 

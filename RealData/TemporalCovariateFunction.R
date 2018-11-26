@@ -37,7 +37,7 @@ temporaldata.fun <-function(data,site,web){
     session.num[not.trapped[i]]<-session.num[max(which(sn<not.trapped[i]))]
   }
     
-  temporal.covariates <- data.frame(month.session=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num)
+  temporal.covariates <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num)
 
   return(temporal.covariates)
 }
