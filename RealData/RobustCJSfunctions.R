@@ -53,8 +53,13 @@ known.state.cjs=function(ch){
 # This applies to survival (phi) 
 # if want to apply covariates to capture probabilities, then months not trapped won't matter, only use the first one
 
-temporaldata.fun <-function(data,site,web){
-  sessions <- sort(unique(data$Session[which(data$site==site&data$web==web)]))
+temporaldata.fun <-function(data,site,web=NULL){
+  if(length(web)==1){
+    sessions <- sort(unique(data$Session[which(data$site==site&data$web==web)]))
+    }else{
+      sessions <- sort(unique(data$Session[which(data$site==site)]))
+    }
+  
   first.session <- sessions[1]
   last.session <- sessions[length(sessions)]
   first.montha <- strsplit(as.character(first.session),split=character(0))[[1]][5:6]
@@ -86,12 +91,32 @@ temporaldata.fun <-function(data,site,web){
     session.num[not.trapped[i]]<-session.num[max(which(sn<not.trapped[i]))]
   }
   
-  temporal.covariates <- data.frame(month.session=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num)
+  temporal.covariates <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num)
   
   return(temporal.covariates)
 }
 
 
 
+###############################
+## Create a dataframe for individual covariates
 
+####### Individual Covariates
 
+individual.covariate.fun <- function(data, tags, Ch.secondary){
+  ic <- data.frame(ID=1:dim(Ch.secondary[[1]])[1],tag=tags)
+
+  web <- character()
+  sex <- numeric() #1 male, 0 female
+  for(i in 1:dim(Ch.secondary[[1]])[1]){
+    ind <- which(data$tag==IDs[i])
+    x <- data[ind,]
+    x <- x[order(x$Session),]
+    web[i] <- as.character(x$web[1])
+    
+    sex[i] <- max(x$sex) # they aren't NAs but -9
+  }
+  ic$web <- web
+  ic$sex <- replace(sex,sex==-9,NA)
+  return(ic)
+}
