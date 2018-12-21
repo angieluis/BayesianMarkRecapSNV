@@ -31,7 +31,7 @@ Zuni.pema.data <- Zuni.data[pema.ind,]
 
 Zuni.Session.days <- list()
 for(i in 1:length(first.dates)){
-  Session.days[[i]] <- Zuni.dates[which(Zuni.dates==first.dates[i]):ifelse(i==length(first.dates),length(Zuni.dates),(which(Zuni.dates==first.dates[i+1])-1))]
+  Zuni.Session.days[[i]] <- Zuni.dates[which(Zuni.dates==first.dates[i]):ifelse(i==length(first.dates),length(Zuni.dates),(which(Zuni.dates==first.dates[i+1])-1))]
 }
 
 
@@ -54,7 +54,7 @@ for(m in 1:length(Session.days)){
       ch.mat[i,d] <- ifelse(length(which(Zuni.pema.data$tag==IDs[i] & Zuni.pema.data$date==days[d]))>0,1,0)
     }
   }
-  dimnames(ch.mat) <- list(IDs,Session.days[[m]])
+  dimnames(ch.mat) <- list(IDs,NULL)
   Ch.list[[m]] <- ch.mat
   cat("session = ", m, "\n")
 }
@@ -64,10 +64,10 @@ Zuni.pema.Ch.secondary <- Ch.list
   
 ####### Temporal Covariates 
 
-source("TemporalCovariateFunction.R")
-Zuni.temporal.covariates <- temporaldata.fun(data=UNMcaptures, site="Zuni")
+source("RobustCJSfunctions.R")
+Zuni.monthly.temporal.covariates <- monthly.temporaldata.fun(data=UNMcaptures, site="Zuni")
 
-
+Zuni.weekly.temporal.covariates <- weekly.temporaldata.fun(dates=Zuni.dates)
 ####### Individual Covariates
 
 Zuni.individual.covariates <- individual.covariate.fun(Zuni.pema.data, IDs, Zuni.pema.Ch.secondary)
@@ -75,4 +75,4 @@ Zuni.individual.covariates <- individual.covariate.fun(Zuni.pema.data, IDs, Zuni
 
 ##############
 
-save(Zuni.pema.Ch.secondary,Zuni.Session.days,Zuni.temporal.covariates,Zuni.primary.time.int.weeks,Zuni.individual.covariates, file="ZunipemaCH.RData")
+save(Zuni.pema.Ch.secondary,Zuni.Session.days,Zuni.weekly.temporal.covariates,Zuni.monthly.temporal.covariates,Zuni.primary.time.int.weeks,Zuni.individual.covariates, file="ZunipemaCH.RData")

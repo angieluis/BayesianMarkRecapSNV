@@ -16,6 +16,19 @@ primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices
 }
 
 
+## function to make a primary Ch but by week instead of month
+# make weeks not trapped = 0 (so not really capture history)
+# this will just be used to set initial values and known states for weekly z
+weekly.primaryCH.fun <- function(CH.primary,temporal.covariates){
+  CH <- matrix(NA, ncol=max(temporal.covariates$week),nrow=dim(CH.primary)[1])
+  old <- which(is.finite(temporal.covariates$Prim))
+  CH[,old]<- CH.primary
+  CH <- replace(CH,is.na(CH),0)
+  return(CH)
+}
+
+
+
 ###### function to create matrix of initial values for latent state z
 # we shouldn't give initial values for those elements of z whose value is specified in the data.
 # they get an NA
@@ -30,6 +43,8 @@ cjs.init.z=function(ch,f){
   }
   return(ch)	
 }
+
+
 
 #function to create matrix with info about known latent state z
 known.state.cjs=function(ch){
@@ -53,7 +68,7 @@ known.state.cjs=function(ch){
 # This applies to survival (phi) 
 # if want to apply covariates to capture probabilities, then months not trapped won't matter, only use the first one
 
-temporaldata.fun <-function(data,site,web=NULL){
+monthly.temporaldata.fun <-function(data,site,web=NULL){
   if(length(web)==1){
     sessions <- sort(unique(data$Session[which(data$site==site&data$web==web)]))
     }else{
@@ -96,12 +111,42 @@ temporaldata.fun <-function(data,site,web=NULL){
   return(temporal.covariates)
 }
 
+####### temporal data on a weekly scale
+## update this so based off dates not sessions
+
+library(lubridate) # or could say lubridate:: before funciton
+
+weekly.temporaldata.fun <-function(dates){ # dates trapped
+  time.int <- diff(dates)
+  first.dates <- dates[c(1,1+which(time.int>1))]
+  
+  session.week.data <- data.frame(Prim=1:length(first.dates),week=week(first.dates),month=month(first.dates),year=year(first.dates))
+  session.week.data$cumweek<-session.week.data$week+(session.week.data$year-min(session.week.data$year))*52
+
+  time.intervals <- diff(session.week.data$cumweek)
+
+  longweek <- session.week.data$cumweek[1]:session.week.data$cumweek[length(session.week.data$cumweek)]
+  longdates <- first.dates[1]
+  for(i in 1:length(time.intervals)){
+  
+    for(j in 1:time.intervals[i]){
+      longdates <- c(longdates,longdates[length(longdates)]+dweeks(1))
+    }
+  }
+
+  week.data <- data.frame(week=1:length(longdates),cumweek=longweek,longdates=longdates, month=month(longdates),year=year(longdates),session=ifelse(month(longdates)>9,paste(year(longdates),month(longdates),sep=""),paste(year(longdates),"0",month(longdates),sep="")))
+  week.data$Prim=session.week.data$Prim[match(week.data$cumweek,session.week.data$cumweek)]
+
+  return(week.data)
+}
+
+
+
 
 
 ###############################
 ## Create a dataframe for individual covariates
-
-####### Individual Covariates
+# this has 2 individual covariates: web and sex
 
 individual.covariate.fun <- function(data, tags, Ch.secondary){
   ic <- data.frame(ID=1:dim(Ch.secondary[[1]])[1],tag=tags)
@@ -116,7 +161,7 @@ individual.covariate.fun <- function(data, tags, Ch.secondary){
     
     sex[i] <- max(x$sex) # they aren't NAs but -9
   }
-  ic$web <- web
-  ic$sex <- replace(sex,sex==-9,NA)
+  ic$web <- factor(web)
+  ic$sex <- factor(replace(sex,sex==-9,NA))
   return(ic)
 }
