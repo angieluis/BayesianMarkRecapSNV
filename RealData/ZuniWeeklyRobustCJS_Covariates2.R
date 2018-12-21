@@ -154,7 +154,7 @@ date()
 Z2.weekly.rcjs.phi.dummyNDVI.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # 
 
-# 2 hours and 12 minutes
+# working - don't know the time but long
 
 
 ###############################################################################
