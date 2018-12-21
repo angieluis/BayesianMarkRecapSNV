@@ -8,12 +8,9 @@
 # each month contains all animals in dataset (not just those caught that month)
 
 ###### Covariate dataframe called temporal.covariates
-# temporal.covariates$long.month is every month of the start of the dataset 
-  # to the end starting at 1 
-# temporal.covariates$covariate.prim is each primary session. If there are
-  # missing months in the dataset then there will be more than one long.month
-  # to a covariate.prim (goes from 1 to the number of sessions sampled)
-# temporal.covariates$month refers to month of the year (seasonality)
+# temporal.covariates are weekly so that we can simulate z on 
+# a weekly time scale. Prim is on the primary occasions
+# Use the same (monthly) temporal covariate data for the whole month
 
 #################################################################
 
@@ -34,7 +31,7 @@ time.int <- Zuni.primary.time.int.weeks
 temporal.covariates <- Zuni.weekly.temporal.covariates
 individual.covariates <- Zuni.individual.covariates
 
-### See model code in "robust_CJS_phi_month_p_dot_c_dot2.bug"
+### See model code in "robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug"
 
 ################### Do all the data manipulation in R - create vectors
 # and line up all the information and pass to BUGS with bugs.data
@@ -118,6 +115,8 @@ for(i in 1:dim(individual.covariates)[1]){
   NDVI[i,] <- NDVI.m[individual.covariates$web[i],]
 }
 
+# this creates a weekly capture history to pass into the
+# initial values and known state functions
 weeklyCH <- weekly.primaryCH.fun(CH.primary,temporal.covariates)
 
 ##### Bundle data
