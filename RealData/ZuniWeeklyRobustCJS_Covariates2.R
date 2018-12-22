@@ -108,11 +108,11 @@ obs.dat.full <- dplyr::left_join(obs.dat.full,individual.covariates)
 
 
 #NDVI is the only temporal data that varies by individual/web
-# so create a matrix of NDVI values by [i,m]
-NDVI.m <- rbind(temporal.covariates$NDVI_1, temporal.covariates$NDVI_2, temporal.covariates$NDVI_3)
+# so create a matrix of NDVI values by [i,w] (weeks)
+NDVI.w <- rbind(temporal.covariates$NDVI_1, temporal.covariates$NDVI_2, temporal.covariates$NDVI_3)
 NDVI <- matrix(NA,ncol=dim(temporal.covariates)[1], nrow=dim(individual.covariates)[1])
 for(i in 1:dim(individual.covariates)[1]){
-  NDVI[i,] <- NDVI.m[individual.covariates$web[i],]
+  NDVI[i,] <- NDVI.w[individual.covariates$web[i],]
 }
 
 # this creates a weekly capture history to pass into the
@@ -143,16 +143,21 @@ bugs.data <- list(
 ) 
 
 #initial values
-inits=function(){list(z=cjs.init.z(weeklyCH,f),mean.phi=runif(12,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1) ,alpha.1=runif(1,0,1))} 
+inits=function(){list(z=cjs.init.z(weeklyCH,f),alpha.month=runif(12,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1) ,alpha.NDVI=runif(1,0,1))} 
 
 #parameters monitored
-parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.1")
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.NDVI")
 
 
 date()
 Z2.weekly.rcjs.phi.dummyNDVI.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # # about 12 hours
 
+date()
+Z2.weekly.rcjs.phi.month.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_month_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() #
+
+save.image("Z2weeklymodels.RData")
 
 ###############################################################################
 ### Model Comparisons
