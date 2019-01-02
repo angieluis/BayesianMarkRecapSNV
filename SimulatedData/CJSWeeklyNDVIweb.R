@@ -5,17 +5,20 @@ library(R2jags)
 library(tidyr)
 library(dplyr)
 setwd("~/Documents/JAGS/BayesianMarkRecapSNV/SimulatedData")
+#setwd("~/BayesianMarkRecapSNV/SimulatedData")
 
 source("~/Documents/JAGS/BayesianMarkRecapSNV/RealData/RobustCJSfunctions.R")
+#source("~/BayesianMarkRecapSNV/RealData/RobustCJSfunctions.R")
 
 load("~/Documents/JAGS/BayesianMarkRecapSNV/RealData/Zunitemporalcovariates.RData")
+#load("Zunitemporalcovariates.RData")
 
 
 ##########################simulate data where survival is a (logit) linear function of NDVI
 
 # Define parameter values
 n.occasions=120						#number of capture occasions
-marked=rep(15,n.occasions-1)			#annual number of newly marked indiv
+marked=rep(3,n.occasions-1)			#annual number of newly marked indiv
 set.seed(452);NDVI.dat=matrix(rnorm(n.occasions*3,0,1),ncol=n.occasions,nrow=3)		#simulate normalized precipitation data 
 alpha0=0.1							#intercept coefficent for how Prcp affects phi
 alpha1=1							#slope coefficient for how prcp affects phi

@@ -10,7 +10,7 @@ cat("
     
     ###############Priors and constraints
     alpha.0 ~ dnorm(0, 0.4)T(-10,10)   #prior for intercept
-    alpha.1 ~ dnorm(0, 0.4)T(-10,10)   #prior for slope on NDVI
+    alpha.NDVI ~ dnorm(0, 0.4)T(-10,10)   #prior for slope on NDVI
     mean.p ~ dnorm(0, 0.4)T(-10,10)       # prior for p
     mean.c ~ dnorm(0, 0.4)T(-10,10)       # prior for c
     
@@ -19,7 +19,7 @@ cat("
       for(w in 1:(n.weeks-1)){  
         # phi has  2 dimensions [indiv, and weeks]
         
-        logit(phi[i,w]) <- alpha.0 + alpha.1 * NDVI[i,w] 
+        logit(phi[i,w]) <- alpha.0 + alpha.NDVI * NDVI[i,w] 
 
       } #w for weeks
     } #i for individual
