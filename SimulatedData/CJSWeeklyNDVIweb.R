@@ -240,7 +240,7 @@ date()
 Simweekly.rcjs.phi.NDVI.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # 
 
-save(Simweekly.rcjs.phi.NDVI.p.c.constant,file="SimweeklyNDVImodel.RData")
+save.image("SimweeklyNDVImodel.RData")
 
 #######################################################################
 ### estimated alpha values are for weekly survival, but simulated above as monthly survival
