@@ -3,6 +3,8 @@
 # Modeling temporal and individual covariate, NDVI
 #p and c are constant
 
+#modeled on a weekly scale
+
 #################################specify model in BUGS language
 sink("robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug")
 cat("
