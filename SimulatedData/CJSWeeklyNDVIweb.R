@@ -5,17 +5,20 @@ library(R2jags)
 library(tidyr)
 library(dplyr)
 setwd("~/Documents/JAGS/BayesianMarkRecapSNV/SimulatedData")
+#setwd("~/BayesianMarkRecapSNV/SimulatedData")
 
 source("~/Documents/JAGS/BayesianMarkRecapSNV/RealData/RobustCJSfunctions.R")
+#source("~/BayesianMarkRecapSNV/RealData/RobustCJSfunctions.R")
 
 load("~/Documents/JAGS/BayesianMarkRecapSNV/RealData/Zunitemporalcovariates.RData")
+#load("Zunitemporalcovariates.RData")
 
 
 ##########################simulate data where survival is a (logit) linear function of NDVI
 
 # Define parameter values
 n.occasions=120						#number of capture occasions
-marked=rep(15,n.occasions-1)			#annual number of newly marked indiv
+marked=rep(3,n.occasions-1)			#annual number of newly marked indiv
 set.seed(452);NDVI.dat=matrix(rnorm(n.occasions*3,0,1),ncol=n.occasions,nrow=3)		#simulate normalized precipitation data 
 alpha0=0.1							#intercept coefficent for how Prcp affects phi
 alpha1=1							#slope coefficient for how prcp affects phi
@@ -236,3 +239,22 @@ parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.NDVI")
 date()
 Simweekly.rcjs.phi.NDVI.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # 
+
+save.image("SimweeklyNDVImodel.RData")
+
+#######################################################################
+### estimated alpha values are for weekly survival, but simulated above as monthly survival
+# so not directly equivalent (need to simulate weekly to be exact)
+phi1.est.w <- revlogit(1.95 + 0.666*NDVI.dat[1,])
+phi1.est.m <- phi1.est.w^4 # approx every 4 weeks
+plot(phi1,phi1.est.m,ylim=c(0,1),xlim=c(0,1))
+abline(0,1)
+
+phi2.est.w <- revlogit(1.95 + 0.666*NDVI.dat[2,])
+phi2.est.m <- phi2.est.w^4 # approx every 4 weeks
+points(phi2,phi2.est.m)
+phi3.est.w <- revlogit(1.95 + 0.666*NDVI.dat[3,])
+phi3.est.m <- phi3.est.w^4 # approx every 4 weeks
+points(phi3,phi3.est.m)
+# pretty close
+#I'd day it's working
