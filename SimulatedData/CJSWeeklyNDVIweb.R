@@ -215,7 +215,7 @@ bugs.data <- list(
   f = individual.covariates$f.week, 
   p.or.c = obs.dat.full$p.or.c,
   web = individual.covariates$web,
-  sex = individual.covariates$sex,
+  #sex = individual.covariates$sex,
   nind = dplyr::n_distinct(obs.dat.full$ID), 
   n.weeks = max(obs.dat.full$week), 
   #time.int = time.int,
