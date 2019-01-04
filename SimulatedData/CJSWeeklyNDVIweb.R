@@ -238,7 +238,7 @@ parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.NDVI")
 
 date()
 Simweekly.rcjs.phi.NDVI.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_NDVI_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # about 5 hours
+date() # about 5 hours #
 
 save.image("SimweeklyNDVImodel.RData")
 
