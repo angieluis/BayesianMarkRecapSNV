@@ -7,10 +7,11 @@
 #  each element of the list is a primary occasion (month), and the matrix is i by d (rows are individuals and columns are secondary occasions- days)
 # each month contains all animals in dataset (not just those caught that month)
 
-###### Covariate dataframe called temporal.covariates
+###### Covariate dataframes called temporal.covariates & individual.covariates
 # temporal.covariates are weekly so that we can simulate z on 
 # a weekly time scale. Prim is on the primary occasions
 # Use the same (monthly) temporal covariate data for the whole month
+# individual covariates include web, sex
 
 #################################################################
 
@@ -131,7 +132,7 @@ bugs.data <- list(
   sex = individual.covariates$sex,
   nind = dplyr::n_distinct(obs.dat.full$ID), 
   n.weeks = max(obs.dat.full$week), 
-  time.int = time.int,
+  #time.int = time.int,
   n.obs = nrow(obs.dat.full),
   weeklyCH = weeklyCH,
   z = known.state.cjs(weeklyCH), 
@@ -155,14 +156,15 @@ date() # # about 12 hours
 
 date()
 Z2.weekly.rcjs.phi.month.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_month_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() #
+date() # 10 hours and 10 min
 
 save.image("Z2weeklymodels.RData")
 
 ###############################################################################
 ### Model Comparisons
+## need to use new WAIC instead of DIC
 ###############################################################################
-mod.names <- objects()[grep("Z2.rcjs.",objects())]
+mod.names <- objects()[grep("Z2.weekly.rcjs",objects())]
 mod.list <- list()
 mod.table <- data.frame(model=mod.names,npar=rep(NA,length(mod.names)),
                         DIC=rep(NA,length(mod.names)))
