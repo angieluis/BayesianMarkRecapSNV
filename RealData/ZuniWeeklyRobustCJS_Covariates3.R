@@ -107,8 +107,12 @@ date()
 Z12.weekly.rcjs.phi.ndvi_1.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_ndvi_0_ndvi_1_tmax_3_tmin_5_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() # 23 hours
 
-
 save.image("Z12weeklymodels.RData")
+
+Z12.weekly.rcjs.phi.ndvi_1.p.c.constant
+hist.plot.fun(Z12.weekly.rcjs.phi.ndvi_1.p.c.constant)
+chain.plot.fun(Z12.weekly.rcjs.phi.ndvi_1.p.c.constant)
+
 
 ###############################################################################
 ### Model Comparisons

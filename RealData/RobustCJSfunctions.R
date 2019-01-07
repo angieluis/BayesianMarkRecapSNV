@@ -301,3 +301,24 @@ weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=TRUE){
 
   return(obs.dat.full)
 }
+
+
+
+######################################
+## functions for plotting output
+
+hist.plot.fun <- function(BUGSout, ...){
+  pari <- (1:length(BUGSout$BUGSoutput$sims.list))[-which(names(BUGSout$BUGSoutput$sims.list)=="deviance")]
+  par(mfrow=c(3,ceiling(length(pari)/3)))
+  for(i in pari){
+    hist(BUGSout$BUGSoutput$sims.list[[i]],breaks = 30,main=names(BUGSout$BUGSoutput$sims.list)[[i]],xlab="value")
+  }
+}
+
+chain.plot.fun <- function(BUGSout, ...){
+  pari <- (1:length(BUGSout$BUGSoutput$sims.list))[-which(names(BUGSout$BUGSoutput$sims.list)=="deviance")]
+  par(mfrow=c(3,ceiling(length(pari)/3)))
+  for(i in pari){
+    plot.ts(BUGSout$BUGSoutput$sims.list[[i]],main=names(BUGSout$BUGSoutput$sims.list)[[i]],ylab="value")
+  }
+}
