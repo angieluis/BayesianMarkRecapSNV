@@ -29,9 +29,7 @@ load("ZunipemaCH.RData")
 CH.secondary <- Zuni.pema.Ch.secondary
 CH.primary <- primary.ch.fun(CH.secondary)
 time.int <- Zuni.primary.time.int.weeks 
-dates <- Zuni.dates # dates trapped
-# see "ZuniCaptureHistories.R" for code on capture histories
-#Zuni.individual.covariates <- individual.covariate.fun(Zuni.pema.data, sort (unique(Zuni.pema.data$tag)), Zuni.pema.Ch.secondary)
+dates <- Zuni.dates
 individual.covariates <- Zuni.individual.covariates
 
 
@@ -58,7 +56,58 @@ temporal.covariates <- weekly.temporaldata.fun(
 
 
 ################### Do the data manipulation in R
-                                      
+
+date()
+obs.dat.full <- weekly.longdataCH.fun(CH.secondary, temporal.covariates$weekly.longdata, p_or_c=TRUE)
+date() # 22 min
+
+first.caught <- apply(CH.primary,1,function(x){min(which(x>0))})
+individual.covariates$f.week <- temporal.covariates$weekly.longdata$week[match(first.caught,temporal.covariates$weekly.longdata$Prim)]
+
+
+
+# this creates a weekly capture history to pass into the
+# initial values and known state functions
+weeklyCH <- weekly.primaryCH.fun(CH.primary,temporal.covariates$weekly.longdata)
+
+##### Bundle data
+bugs.data <- list(
+  y = obs.dat.full$State,
+  prim = obs.dat.full$Prim,
+  sec = obs.dat.full$Sec,
+  id = obs.dat.full$ID,
+  f = individual.covariates$f.week, 
+  p.or.c = obs.dat.full$p.or.c,
+  web = individual.covariates$web,
+  sex = individual.covariates$sex,
+  nind = dplyr::n_distinct(obs.dat.full$ID), 
+  n.weeks = max(obs.dat.full$week), 
+  #time.int = time.int,
+  n.obs = nrow(obs.dat.full),
+  weeklyCH = weeklyCH,
+  z = known.state.cjs(weeklyCH), 
+  cjs.init.z=cjs.init.z, 
+  CH.primary=CH.primary,
+  covariate.month = temporal.covariates$weekly.longdata$month,
+  week = obs.dat.full$week,
+  ndvi_0 = temporal.covariates$ndvi_0,
+  ndvi_1 = temporal.covariates$ndvi_1,
+  tmax_3 = temporal.covariates$tmax_3,
+  tmin_5 = temporal.covariates$tmin_5
+) 
+
+#initial values
+inits=function(){list(z=cjs.init.z(weeklyCH,f), alpha.month=runif(12,0,1), mean.p=runif(1,0,1), mean.c=runif(1,0,1), alpha.0=runif(1,0,1), alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1) )} 
+
+#parameters monitored
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5")
+
+
+date()
+Z12.weekly.rcjs.phi.ndvi_1.p.c.constant=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_phi_ndvi_0_ndvi_1_tmax_3_tmin_5_p_dot_c_dot.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 23 hours
+
+
 save.image("Z12weeklymodels.RData")
 
 ###############################################################################
