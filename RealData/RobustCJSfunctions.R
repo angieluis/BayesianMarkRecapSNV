@@ -114,13 +114,22 @@ monthly.temporaldata.fun <-function(data,site,web=NULL){
 ####### temporal data on a weekly scale
 ## update this so based off dates not sessions
 
-library(lubridate) # or could say lubridate:: before funciton
+library(tidyverse,lubridate) 
 
-weekly.temporaldata.fun <-function(dates){ # dates trapped
+weekly.temporaldata.fun <-function(
+    dates, # dates trapped
+    data=NULL, # data frame of monthlytemporal data, with either a column called date or yearmon (must include months not trapped)
+    longdata=TRUE, # if TRUE, then data are long like sw.temp.data and have all the sites and all temporal data with no time lags, if false, then data are just as will be input with 
+    site=NULL, # if longdata=TRUE 
+    web=NULL, # if longdata=TRUE
+    cov.list=NULL, # if longdata=TRUE, list of covariates and their time lags, e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag and with a lag 1 and tmax with lag 3. 
+    individual.covariates=NULL # if present, will add lists of temporal covariates organized by individual (web) so can be input directly in model, e.g. NDVI_1[i,t]
+    ){ 
+
   time.int <- diff(dates)
   first.dates <- dates[c(1,1+which(time.int>1))]
   
-  session.week.data <- data.frame(Prim=1:length(first.dates),week=week(first.dates),month=month(first.dates),year=year(first.dates))
+  session.week.data <- data.frame(Prim=1:length(first.dates),week=lubridate::week(first.dates),month=lubridate::month(first.dates),year=lubridate::year(first.dates))
   session.week.data$cumweek<-session.week.data$week+(session.week.data$year-min(session.week.data$year))*52
 
   time.intervals <- diff(session.week.data$cumweek)
@@ -130,14 +139,84 @@ weekly.temporaldata.fun <-function(dates){ # dates trapped
   for(i in 1:length(time.intervals)){
   
     for(j in 1:time.intervals[i]){
-      longdates <- c(longdates,longdates[length(longdates)]+dweeks(1))
+      longdates <- c(longdates,longdates[length(longdates)]+lubridate::dweeks(1))
     }
   }
 
-  week.data <- data.frame(week=1:length(longdates),cumweek=longweek,longdates=longdates, month=month(longdates),year=year(longdates),session=ifelse(month(longdates)>9,paste(year(longdates),month(longdates),sep=""),paste(year(longdates),"0",month(longdates),sep="")))
+  week.data <- data.frame(week=1:length(longdates),cumweek=longweek,longdates=longdates, month=lubridate::month(longdates),year=lubridate::year(longdates),session=ifelse(lubridate::month(longdates)>9,paste(lubridate::year(longdates),lubridate::month(longdates),sep=""),paste(lubridate::year(longdates),"0",lubridate::month(longdates),sep="")))
   week.data$Prim=session.week.data$Prim[match(week.data$cumweek,session.week.data$cumweek)]
+  
+  if(length(data)>0){
+  if(longdata==TRUE){
+    ls <- length(site)
+    datas <- data[grep(site[1],data$site,ignore.case=TRUE),]
+    if(ls>1){
+      for(i in 2:ls){
+        datas <- rbind(datas,data[grep(site[i],data$site,ignore.case=TRUE),])
+       }
+     }
+    lw <- length(web)
+    dataw <- datas[which(datas$web==web[1]),]
+    if(lw>1){
+      for(i in 2:lw){
+        dataw <- rbind(dataw,datas[which(datas$web==web[i]),])
+      }
+    }
+    
+    # make a wide data frame with date/yearmon going from first trapped session to last trapped session
+    wdate=lubridate::dmy(paste("1",week.data$month,week.data$year,sep="-"))
+    data.w <- data.frame(date=sort(unique(wdate)))
+    data.w$year <- lubridate::year(data.w$date)
+    data.w$month <- lubridate::month(data.w$date)
+    dataw$date <- lubridate::dmy(paste("1",dataw$yearmon))
+    cl <- length(cov.list)
+    for(c in 1:cl){
+      nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+      col <- grep(names(cov.list)[c],names(dataw),ignore.case=TRUE)
+      fd <- which(dataw$date==data.w$date[1]) 
+      ld <- which(dataw$date==data.w$date[length(data.w$date)])
+      if(length(fd)==1){
+        data.w <- cbind(data.w, dataw[(fd-cov.list[[c]]):(ld-cov.list[[c]]),col])
+        names(data.w)[dim(data.w)[2]] <- nam
+      }
+      if(length(fd)>1){
+        for(i in 1:length(fd)){
+          data.w <- cbind(data.w, dataw[(fd[i]-cov.list[[c]]):(ld[i]-cov.list[[c]]),col])
+          names(data.w)[dim(data.w)[2]] <- paste(nam,paste("web",dataw$web[fd[i]],sep=""),sep=".") 
+        } 
+      }
+    }
+  
+    week.data <- dplyr::left_join(week.data,data.w)  
+    
+  }
 
-  return(week.data)
+  }
+  
+  weekly.temporal.data <- list(weekly.longdata=week.data)
+
+  # make matrices of temporal covariates matched up to individuals (temporal data for the individual based on which web they were on)
+  if(length(individual.covariates)>0){
+    for(c in 1:length(cov.list)){
+      nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+      cols <- grep(nam,names(week.data))
+      col.name <- names(week.data)[cols]
+      web.nam <- unlist(lapply(strsplit(col.name,".web"),function(x){x[2]}))
+      dat <- week.data[,cols]
+      names(dat) <- web.nam 
+      
+      mat <- matrix(NA,ncol=dim(week.data)[1], nrow=dim(individual.covariates)[1])
+      for(i in 1:dim(individual.covariates)[1]){
+        w <- individual.covariates$web[i]
+        mat[i,] <- dat[,which(names(dat)==w)]
+      } #i
+      
+       
+      weekly.temporal.data[[c+1]] <- mat
+      names(weekly.temporal.data)[[c+1]] <- nam
+    } #c
+  } #if
+  return(weekly.temporal.data)
 }
 
 
@@ -164,4 +243,61 @@ individual.covariate.fun <- function(data, tags, Ch.secondary){
   ic$web <- factor(web)
   ic$sex <- factor(replace(sex,sex==-9,NA))
   return(ic)
+}
+
+######################################################
+# function to take Robust Design capture history list of primary 
+# occasions (months) and turn it into long data frame where each 
+# row is a week
+
+weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=TRUE){ 
+  #  add the primary occassion to the data
+  for(i in 1:length(CH.secondary)){
+    CH.secondary[[i]] <- cbind(data.frame(Prim = i), CH.secondary[[i]])
+  }
+
+  #### define first capture (f)
+  # z is going to be by week - but capture histories are by month. need f to be in weeks
+  first.caught <- apply(CH.primary,1,function(x){min(which(x>0))})
+  individual.covariates$f.week <- temporal.covariates$week[match(first.caught,temporal.covariates$Prim)]
+
+  obs.dat <- purrr::map_df(
+    CH.secondary, 
+    ~ tibble::as_tibble(.x) %>%    # 
+      dplyr::mutate(
+        ID = 1:n()
+      ) %>% 
+      tidyr::gather(Sec, State, -Prim, -ID) %>%
+      dplyr::select(ID, Prim, Sec, State)
+  )
+
+  #### if p_or_c==TRUE, add a column that indicates whether that 
+  #individual has been caught before in that primary occasion (do we 
+  # use p or c?)
+  if(p_or_c==TRUE){
+    p.or.c <- numeric()
+    for(i in 1:dim(obs.dat)[1]){
+      # the times that animal was caught that primary session
+      dat <- obs.dat[which(obs.dat$Prim==obs.dat$Prim[i] & obs.dat$ID==obs.dat$ID[i] & obs.dat$State==1),]
+  
+      if(dim(dat)[1]==0){ # if not caught that primary session at all use p (0)
+        p.or.c[i] <- 0
+      }else{ #  otherwise use p (0) unless already caught caught that session, then use c (1)
+        firstcap <- min(as.numeric(dat$Sec))
+        p.or.c[i] <- ifelse(firstcap<obs.dat$Sec[i], 1 ,0)   #BUGs doesn't like characters so 0 is p, 1 is c
+      }
+    }
+    p.or.c <- factor(p.or.c)
+    obs.dat <- dplyr::mutate(obs.dat, p.or.c)
+  }
+
+  # join with temporal covariates to make weekly
+  obs.dat.full <- inner_join(obs.dat,temporal.covariates[,c("week","Prim")])
+  obs.dat.full <- arrange(obs.dat.full,week,ID)
+
+  #  Subset observation data to observed bits
+  obs.dat.full <- dplyr::left_join(obs.dat.full, individual.covariates[,c("ID","f.week")]) %>%
+    dplyr::filter(week >= f.week)
+
+  return(obs.dat.full)
 }
