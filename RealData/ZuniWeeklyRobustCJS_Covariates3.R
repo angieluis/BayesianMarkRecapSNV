@@ -29,7 +29,7 @@ load("ZunipemaCH.RData")
 CH.secondary <- Zuni.pema.Ch.secondary
 CH.primary <- primary.ch.fun(CH.secondary)
 time.int <- Zuni.primary.time.int.weeks 
-dates <- Zuni.dates
+dates <- Zuni.dates # dates trapped
 individual.covariates <- Zuni.individual.covariates
 
 
@@ -42,7 +42,7 @@ individual.covariates <- individual.covariates[-del,]
 individual.covariates$ID <- 1:length(individual.covariates$ID)
 
 temporal.covariates <- weekly.temporaldata.fun(
-  dates=dates, 
+  dates=dates, # dates trapped
   data= sw.temp.data, # all the temporal covariate data in long format
   site= "Zuni", 
   web= c(1,2), 
