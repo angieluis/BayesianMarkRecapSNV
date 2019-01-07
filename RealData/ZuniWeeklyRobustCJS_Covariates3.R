@@ -29,7 +29,9 @@ load("ZunipemaCH.RData")
 CH.secondary <- Zuni.pema.Ch.secondary
 CH.primary <- primary.ch.fun(CH.secondary)
 time.int <- Zuni.primary.time.int.weeks 
-dates <- Zuni.dates
+dates <- Zuni.dates # dates trapped
+# see "ZuniCaptureHistories.R" for code on capture histories
+#Zuni.individual.covariates <- individual.covariate.fun(Zuni.pema.data, sort (unique(Zuni.pema.data$tag)), Zuni.pema.Ch.secondary)
 individual.covariates <- Zuni.individual.covariates
 
 
