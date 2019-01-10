@@ -112,7 +112,6 @@ monthly.temporaldata.fun <-function(data,site,web=NULL){
 }
 
 ####### temporal data on a weekly scale
-## update this so based off dates not sessions
 
 library(tidyverse,lubridate) 
 
@@ -250,7 +249,7 @@ individual.covariate.fun <- function(data, tags, Ch.secondary){
 # occasions (months) and turn it into long data frame where each 
 # row is a week
 
-weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=TRUE){ 
+weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=FALSE){ 
   #  add the primary occassion to the data
   for(i in 1:length(CH.secondary)){
     CH.secondary[[i]] <- cbind(data.frame(Prim = i), CH.secondary[[i]])
@@ -321,4 +320,28 @@ chain.plot.fun <- function(BUGSout, ...){
   for(i in pari){
     plot.ts(BUGSout$BUGSoutput$sims.list[[i]],main=names(BUGSout$BUGSoutput$sims.list)[[i]],ylab="value")
   }
+}
+
+
+
+
+
+# make p.or.c array, with a 0 if not caught yet that session and 1 if have
+p.or.c.array.fun<- function(CH.secondary, temporal.covariates){
+  nind <- dim(CH.secondary[[1]])[1]
+  temp.data <- temporal.covariates$weekly.longdata
+  nweeks <- dim(temp.data)[1]
+  n.sec <- unlist(lapply(CH.secondary,function(x){dim(x)[2]}))
+  p.or.c <- array(NA, dim=c(nind, nweeks, max(n.sec)))
+  weeks.trapped <- temp.data$week[which(is.finite(temp.data$Prim))]
+  for(w in weeks.trapped){
+    m <- temp.data$Prim[w]
+    for(i in 1:nind){
+      for(d in 1:n.sec[m]){
+        p.or.c[i,w,d] <- ifelse(sum(CH.secondary[[m]][i,1:(d-1)])==0,0,1)
+      } #d
+    } #i
+  } #w
+  
+  return(p.or.c)
 }
