@@ -73,7 +73,11 @@ p.or.c <- p.or.c.array.fun(CH.secondary, temporal.covariates)
 first.caught <- apply(CH.primary,1,function(x){min(which(x>0))})
 individual.covariates$f.week <- temporal.covariates$weekly.longdata$week[match(first.caught,temporal.covariates$weekly.longdata$Prim)]
 
-
+# There are 4 NAs for sex - was getting errors when leaving them in.
+# 0 is female and 1 is male. I will use 0.5 for unknown (should give mean of 
+# male and female)
+individual.covariates$sex <- as.numeric(as.character(individual.covariates$sex))
+individual.covariates$sex[which(is.na(individual.covariates$sex))] <- 0.5
 
 # this creates a weekly capture history to pass into the
 # initial values and known state functions
