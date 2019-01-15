@@ -130,11 +130,14 @@ date() # 23 hours (changed the p or c usage since this one)
 
 date()
 Z12.weekly.rcjs.maxcov=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_weekly_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() # 
+date() # 4.5 days!!
 
 
 save.image("Z12weeklymodels.RData")
 
+Z12.weekly.rcjs.maxcov
+hist.plot.fun(Z12.weekly.rcjs.maxcov)
+chain.plot.fun(Z12.weekly.rcjs.maxcov)
 
 
 ###############################################################################

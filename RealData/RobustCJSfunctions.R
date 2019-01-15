@@ -307,19 +307,38 @@ weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=FALSE)
 ## functions for plotting output
 
 hist.plot.fun <- function(BUGSout, ...){
-  pari <- (1:length(BUGSout$BUGSoutput$sims.list))[-which(names(BUGSout$BUGSoutput$sims.list)=="deviance")]
-  par(mfrow=c(3,ceiling(length(pari)/3)))
-  for(i in pari){
-    hist(BUGSout$BUGSoutput$sims.list[[i]],breaks = 30,main=names(BUGSout$BUGSoutput$sims.list)[[i]],xlab="value")
+  par(mfrow=c(1,1))
+  hist(BUGSout$BUGSoutput$sims.list[[1]],breaks = 30,main=names(BUGSout$BUGSoutput$sims.list)[[1]],xlab="value")
+  par(ask=TRUE)
+  for(i in 2:length(names(BUGSout$BUGSoutput$sims.list))){
+    if(dim(BUGSout$BUGSoutput$sims.list[[i]])[2]==1){
+      hist(BUGSout$BUGSoutput$sims.list[[i]],breaks = 30,main=names(BUGSout$BUGSoutput$sims.list)[[i]],xlab="value")
+    }
+    if(dim(BUGSout$BUGSoutput$sims.list[[i]])[2]>1){
+      for(j in 1:dim(BUGSout$BUGSoutput$sims.list[[i]])[2] ){
+        hist(BUGSout$BUGSoutput$sims.list[[i]][,j],breaks = 30,main=paste(names(BUGSout$BUGSoutput$sims.list)[[i]],j),xlab="value")
+      }
+    }
   }
+  par(ask=FALSE)
 }
 
 chain.plot.fun <- function(BUGSout, ...){
   pari <- (1:length(BUGSout$BUGSoutput$sims.list))[-which(names(BUGSout$BUGSoutput$sims.list)=="deviance")]
-  par(mfrow=c(3,ceiling(length(pari)/3)))
-  for(i in pari){
-    plot.ts(BUGSout$BUGSoutput$sims.list[[i]],main=names(BUGSout$BUGSoutput$sims.list)[[i]],ylab="value")
+  par(mfrow=c(1,1))
+  plot.ts(BUGSout$BUGSoutput$sims.list[[1]],main=names(BUGSout$BUGSoutput$sims.list)[[1]],ylab="value")
+  par(ask=TRUE)
+  for(i in 2:length(pari)){
+    if(dim(BUGSout$BUGSoutput$sims.list[[i]])[2]==1){
+      plot.ts(BUGSout$BUGSoutput$sims.list[[i]],main=names(BUGSout$BUGSoutput$sims.list)[[i]],ylab="value")
+    }
+    if(dim(BUGSout$BUGSoutput$sims.list[[i]])[2]>1){
+      for(j in 1:dim(BUGSout$BUGSoutput$sims.list[[i]])[2] ){
+        plot.ts(BUGSout$BUGSoutput$sims.list[[i]][,j],main=paste(names(BUGSout$BUGSoutput$sims.list)[[i]],j),ylab="value")
+      }
+    }
   }
+  par(ask=FALSE)
 }
 
 
