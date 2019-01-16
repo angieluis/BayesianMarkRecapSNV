@@ -68,7 +68,7 @@ known.state.cjs=function(ch){
 # This applies to survival (phi) 
 # if want to apply covariates to capture probabilities, then months not trapped won't matter, only use the first one
 
-monthly.temporaldata.fun <-function(data,site,web=NULL){
+monthly.temporaldata.fun.old <-function(data,site,web=NULL){
   if(length(web)==1){
     sessions <- sort(unique(data$Session[which(data$site==site&data$web==web)]))
     }else{
@@ -111,9 +111,134 @@ monthly.temporaldata.fun <-function(data,site,web=NULL){
   return(temporal.covariates)
 }
 
-####### temporal data on a weekly scale
 
 library(tidyverse,lubridate) 
+
+monthly.temporaldata.fun <-function(
+  #dates, # dates trapped
+  capture.data, # capture data frame like UNMdata
+  temporal.data=NULL, # data frame of monthlytemporal data, with either a column called date or yearmon (must include months not trapped)
+  longdata=TRUE, # if TRUE, then data are long like sw.temp.data and have all the sites and all temporal data with no time lags, if false, then data are just as will be input with 
+  site=NULL, # if longdata=TRUE 
+  web=NULL, # if longdata=TRUE
+  cov.list=NULL, # if longdata=TRUE, list of covariates and their time lags, e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag and with a lag 1 and tmax with lag 3. 
+  individual.covariates=NULL # if present, will add lists of temporal covariates organized by individual (web) so can be input directly in model, e.g. NDVI_1[i,t]
+){
+  
+  s <- character() # assuming length of site==1 here but not below
+  for(i in 1:length(web)){
+    s <- c(s,sort(unique(capture.data$Session[which(capture.data$site==site & capture.data$web==web[i])])))
+  }
+  sessions.trapped <- sort(unique(s))
+  
+  
+  first.session <- sessions.trapped[1]
+  last.session <- sessions.trapped[length(sessions.trapped)]
+  first.montha <- strsplit(as.character(first.session),split=character(0))[[1]][5:6]
+  first.month <- as.numeric(paste(first.montha[1],first.montha[2],sep=""))
+  
+  first.yeara <- strsplit(as.character(first.session),split=character(0))[[1]][1:4]
+  first.year <- as.numeric(paste(first.yeara[1],first.yeara[2],first.yeara[3],first.yeara[4],sep=""))
+  last.montha <- strsplit(as.character(last.session),split=character(0))[[1]][5:6]
+  last.month <- as.numeric(paste(last.montha[1],last.montha[2],sep=""))
+  last.yeara <- strsplit(as.character(last.session),split=character(0))[[1]][1:4]
+  last.year <- as.numeric(paste(last.yeara[1],last.yeara[2],last.yeara[3],last.yeara[4],sep=""))
+  
+  
+  y <- last.year-first.year
+  ms <- c(first.month:12,rep(1:12,y-1),1:last.month)
+  ys <- c(rep(first.year,length(first.month:12)),rep((first.year+1):(last.year-1),each=12),rep(last.year,length(1:last.month)))
+  #yearmonth <- paste(as.character(ms),as.character(ys),sep="")
+  mc <- as.character(ms)
+  for(i in 1:length(ms)){
+    mc[i] <- ifelse(ms[i]<10,paste(paste(as.character(ys[i]),"0",as.character(ms[i]),sep="")),paste(paste(as.character(ys[i]),as.character(ms[i]),sep="")))
+  }
+  
+  s1 <- sessions.trapped[match(mc,sessions.trapped)]
+  not.trapped <- which(is.na(s1))
+  sn <- 1:length(sessions.trapped)
+  session.num <- sn[match(mc,sessions.trapped)]
+  for(i in 1:length(not.trapped)){
+    session.num[not.trapped[i]]<-session.num[max(which(sn<not.trapped[i]))]
+  }
+  Prim=session.num
+  Prim[which(is.na(s1))]<- NA
+  
+  month.data <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num,Prim=Prim)
+  
+  if(length(temporal.data)>0){
+    if(longdata==TRUE){
+      ls <- length(site)
+      datas <- temporal.data[grep(site[1],temporal.data$site,ignore.case=TRUE),]
+      if(ls>1){
+        for(i in 2:ls){
+          datas <- rbind(datas,temporal.data[grep(site[i],temporal.data$site,ignore.case=TRUE),])
+        }
+      }
+      lw <- length(web)
+      dataw <- datas[which(datas$web==web[1]),]
+      if(lw>1){
+        for(i in 2:lw){
+          dataw <- rbind(dataw,datas[which(datas$web==web[i]),])
+        }
+      }
+      
+      # make a wide data frame with date/yearmon going from first trapped session to last trapped session
+      wdate=lubridate::dmy(paste("1",month.data$month,month.data$year,sep="-"))
+      
+      data.w <- data.frame(date=sort(unique(wdate)))
+      data.w$year <- lubridate::year(data.w$date)
+      data.w$month <- lubridate::month(data.w$date)
+      dataw$date <- lubridate::dmy(paste("1",dataw$yearmon))
+      cl <- length(cov.list)
+      for(c in 1:cl){
+        nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+        col <- grep(names(cov.list)[c],names(dataw),ignore.case=TRUE)
+        fd <- which(dataw$date==data.w$date[1]) 
+        ld <- which(dataw$date==data.w$date[length(data.w$date)])
+        if(length(fd)==1){
+          data.w <- cbind(data.w, dataw[(fd-cov.list[[c]]):(ld-cov.list[[c]]),col])
+          names(data.w)[dim(data.w)[2]] <- nam
+        }
+        if(length(fd)>1){
+          for(i in 1:length(fd)){
+            data.w <- cbind(data.w, dataw[(fd[i]-cov.list[[c]]):(ld[i]-cov.list[[c]]),col])
+            names(data.w)[dim(data.w)[2]] <- paste(nam,paste("web",dataw$web[fd[i]],sep=""),sep=".") 
+          } 
+        }
+      }
+      month.data <- dplyr::left_join(month.data,data.w) 
+    }
+  }
+  monthly.temporal.data <- list(monthly.longdata=month.data)
+  
+  # make matrices of temporal covariates matched up to individuals (temporal data for the individual based on which web they were on)
+  if(length(individual.covariates)>0){
+    for(c in 1:length(cov.list)){
+      nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+      cols <- grep(nam,names(month.data))
+      col.name <- names(month.data)[cols]
+      web.nam <- unlist(lapply(strsplit(col.name,".web"),function(x){x[2]}))
+      dat <- month.data[,cols]
+      names(dat) <- web.nam 
+      
+      mat <- matrix(NA,ncol=dim(month.data)[1], nrow=dim(individual.covariates)[1])
+      for(i in 1:dim(individual.covariates)[1]){
+        w <- individual.covariates$web[i]
+        mat[i,] <- dat[,which(names(dat)==w)]
+      } #i
+      
+      
+      monthly.temporal.data[[c+1]] <- mat
+      names(monthly.temporal.data)[[c+1]] <- nam
+    } #c
+  } #if
+  return(monthly.temporal.data)
+}
+
+####### temporal data on a weekly scale
+
+
 
 weekly.temporaldata.fun <-function(
     dates, # dates trapped
