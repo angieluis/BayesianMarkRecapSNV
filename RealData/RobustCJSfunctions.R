@@ -236,6 +236,21 @@ monthly.temporaldata.fun <-function(
   return(monthly.temporal.data)
 }
 
+
+# creates monthly capture history (including months not trapped) to pass to the
+# initial values and known state functions
+# make months not trapped = 0 (so not really capture history)
+monthly.primaryCH.fun <- function(CH.primary,temporal.covariates){
+  CH <- matrix(NA, ncol=max(temporal.covariates$long.month),nrow=dim(CH.primary)[1])
+  old <- which(is.finite(temporal.covariates$Prim))
+  CH[,old]<- CH.primary
+  CH <- replace(CH,is.na(CH),0)
+  return(CH)
+  
+}
+
+
+
 ####### temporal data on a weekly scale
 
 
@@ -471,21 +486,44 @@ chain.plot.fun <- function(BUGSout, ...){
 
 
 # make p.or.c array, with a 0 if not caught yet that session and 1 if have
-p.or.c.array.fun<- function(CH.secondary, temporal.covariates){
-  nind <- dim(CH.secondary[[1]])[1]
-  temp.data <- temporal.covariates$weekly.longdata
-  nweeks <- dim(temp.data)[1]
-  n.sec <- unlist(lapply(CH.secondary,function(x){dim(x)[2]}))
-  p.or.c <- array(NA, dim=c(nind, nweeks, max(n.sec)))
-  weeks.trapped <- temp.data$week[which(is.finite(temp.data$Prim))]
-  for(w in weeks.trapped){
-    m <- temp.data$Prim[w]
-    for(i in 1:nind){
-      for(d in 1:n.sec[m]){
-        p.or.c[i,w,d] <- ifelse(sum(CH.secondary[[m]][i,1:(d-1)])==0,0,1)
-      } #d
-    } #i
-  } #w
+p.or.c.array.fun<- function(CH.secondary, # can be list or array
+                            temporal.covariates, #list with first being longdata
+                            n.sec.occ, # number of secondary occasions
+                            list=FALSE, #is it a list or array?
+                            weekly=FALSE
+                            ){ #is it weekly or monthly?
+  nind <- ifelse(list==TRUE,dim(CH.secondary[[1]])[1],dim(CH.secondary)[1])
+  if(weekly==TRUE){
+    temp.data <- temporal.covariates$weekly.longdata
+  }else{
+    temp.data <- temporal.covariates$monthly.longdata
+  }
+  
+  nt <- dim(temp.data)[1]
+  n.sec <- n.sec.occ    
+  p.or.c <- array(NA, dim=c(nind, nt, max(n.sec)))
+  
+  if(weekly==TRUE){
+   weeks.trapped <- temp.data$week[which(is.finite(temp.data$Prim))]
+    for(w in weeks.trapped){
+      m <- temp.data$Prim[w]
+      for(i in 1:nind){
+        for(d in 1:n.sec[m]){
+          p.or.c[i,w,d] <- ifelse(sum(CH.secondary[[m]][i,1:(d-1)])==0,0,1)
+        } #d
+      } #i
+    } #w
+  } else{
+    t.trapped <- temp.data$long.month[which(is.finite(temp.data$Prim))]
+    for(t in t.trapped){
+      m <- temp.data$Prim[t]
+      for(i in 1:nind){
+        for(d in 1:n.sec[m]){
+          p.or.c[i,t,d] <- ifelse(sum(CH.secondary[i,m,1:(d-1)])==0,0,1)
+        } #d
+      } #i
+    } #w
+  }
   
   return(p.or.c)
 }
