@@ -365,13 +365,15 @@ weekly.temporaldata.fun <-function(
 ###############################
 ## Create a dataframe for individual covariates
 # this has 2 individual covariates: web and sex
-
-individual.covariate.fun <- function(data, tags, Ch.secondary){
-  ic <- data.frame(ID=1:dim(Ch.secondary[[1]])[1],tag=tags)
-
+# tags must line up to Capture history rows
+individual.covariate.fun <- function(data, tags, Ch.secondary, list=FALSE){
+  nind <- ifelse(list==TRUE,dim(Ch.secondary[[1]])[1],dim(Ch.secondary)[1])
+  
+  ic <- data.frame(ID=1:nind,tag=tags)
+  
   web <- character()
   sex <- numeric() #1 male, 0 female
-  for(i in 1:dim(Ch.secondary[[1]])[1]){
+  for(i in 1:nind){
     ind <- which(data$tag==IDs[i])
     x <- data[ind,]
     x <- x[order(x$Session),]
