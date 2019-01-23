@@ -82,8 +82,8 @@ monthlyCH <- monthly.primaryCH.fun(CH.primary,temporal.covariates$monthly.longda
 ##### Bundle data
 bugs.data <- list(
   y = CH.secondary,
-  f = f, 
-  f.for.init = temporal.covariates$monthly.longdata$long.month[match(f,temporal.covariates$monthly.longdata$Prim)],
+  f = f, # first trap occasion
+  f.longmonth = temporal.covariates$monthly.longdata$long.month[match(f,temporal.covariates$monthly.longdata$Prim)], #longmonth first trapped 
   p.or.c = p.or.c, # now an array to into p models
   cjs.init.z = cjs.init.z, 
   CH.primary = CH.primary,
@@ -104,20 +104,19 @@ bugs.data <- list(
 ) 
 
 #initial values
-inits=function(){list(z=cjs.init.z(monthlyCH,f.for.init), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1) )} 
+inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1) )} 
 
 #parameters monitored
 parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month")
 
 
-
+sptm <- proc.time()
 date()
 Z12.monthly.rcjs.maxcov=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthly_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() 
-
-#Compilation error on line 74.
-#Index out of range taking subset of  z
-
+eptm <- proc.time()
+eptm-ptm
+# completed, took several days, but not sure exactly how long
 
 save.image("Z12monthlymodels.RData")
 
