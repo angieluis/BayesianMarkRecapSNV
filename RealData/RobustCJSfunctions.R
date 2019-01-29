@@ -366,8 +366,10 @@ weekly.temporaldata.fun <-function(
 ## Create a dataframe for individual covariates
 # this has 2 individual covariates: web and sex
 # tags must line up to Capture history rows
-individual.covariate.fun <- function(data, tags, Ch.secondary, list=FALSE){
-  nind <- ifelse(list==TRUE,dim(Ch.secondary[[1]])[1],dim(Ch.secondary)[1])
+individual.covariate.fun <- function(data, #like UNMdata
+                                     tags  # must line up w/ CH.secondary rows
+                                     ){ 
+  nind <- length(tags)
   
   ic <- data.frame(ID=1:nind,tag=tags)
   
@@ -386,12 +388,57 @@ individual.covariate.fun <- function(data, tags, Ch.secondary, list=FALSE){
   return(ic)
 }
 
+
+
+######################################################
+# function to take Robust Design capture history list of primary 
+# occasions (months) and turn it into long data frame where each 
+# row is a month (including months not trapped)
+monthly.longdataCH.fun<-function(CH.secondary, temporal.covariate.df, individual.covariates, p_or_c=FALSE){ 
+  #  add the primary occassion to the data (if not already there)
+  if(length(which(colnames(CH.secondary[[1]])=="Prim"))==0){
+    for(i in 1:length(CH.secondary)){
+      CH.secondary[[i]] <- cbind(data.frame(Prim = i), CH.secondary[[i]])
+    }
+  }
+  #### define first capture (f) if not already there
+  # z will include months not trapped, so first.caught needs to reflect long.month not Prim
+  if(length(which(names(individual.covariates)=="f.longmonth"))==0){
+    CH.primary <- primary.ch.fun(CH.secondary)
+    first.caught <- apply(CH.primary,1,function(x){min(which(x>0))}) #gives primary occasion first caught (not long.month)
+    individual.covariates$f.longmonth <- temporal.covariate.df$long.month[match(first.caught,temporal.covariate.df$Prim)]
+  }
+
+  obs.dat <- purrr::map_df(
+    CH.secondary, 
+    ~ tibble::as_tibble(.x) %>%    # 
+      dplyr::mutate(
+        ID = 1:n()
+      ) %>% 
+      tidyr::gather(Sec, State, -Prim, -ID) %>%
+      dplyr::select(ID, Prim, Sec, State)
+  )
+  
+
+  # join with temporal covariates to make monthly
+  obs.dat.full <- inner_join(obs.dat,temporal.covariate.df[,c("long.month","Prim")])
+  obs.dat.full <- arrange(obs.dat.full,long.month,ID)
+  
+  #  Subset observation data to observed bits
+  obs.dat.full <- dplyr::left_join(obs.dat.full, individual.covariates[,c("ID","f.longmonth")]) %>%
+    dplyr::filter(long.month >= f.longmonth)
+  
+  return(obs.dat.full)
+  
+}
+
+
 ######################################################
 # function to take Robust Design capture history list of primary 
 # occasions (months) and turn it into long data frame where each 
 # row is a week
 
-weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=FALSE){ 
+weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, individual.covariates, p_or_c=FALSE){ 
   #  add the primary occassion to the data
   for(i in 1:length(CH.secondary)){
     CH.secondary[[i]] <- cbind(data.frame(Prim = i), CH.secondary[[i]])
@@ -440,6 +487,7 @@ weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, p_or_c=FALSE)
   obs.dat.full <- dplyr::left_join(obs.dat.full, individual.covariates[,c("ID","f.week")]) %>%
     dplyr::filter(week >= f.week)
 
+  obs.dat.full$Sec=as.numeric(obs.dat.full$Sec)
   return(obs.dat.full)
 }
 
@@ -489,17 +537,14 @@ chain.plot.fun <- function(BUGSout, ...){
 
 # make p.or.c array, with a 0 if not caught yet that session and 1 if have
 p.or.c.array.fun<- function(CH.secondary, # can be list or array
-                            temporal.covariates, #list with first being longdata
+                            temporal.covariates, #dataframe from list
                             n.sec.occ, # number of secondary occasions
                             list=FALSE, #is it a list or array?
                             weekly=FALSE
                             ){ #is it weekly or monthly?
   nind <- ifelse(list==TRUE,dim(CH.secondary[[1]])[1],dim(CH.secondary)[1])
-  if(weekly==TRUE){
-    temp.data <- temporal.covariates$weekly.longdata
-  }else{
-    temp.data <- temporal.covariates$monthly.longdata
-  }
+  
+  temp.data <- temporal.covariates
   
   nt <- dim(temp.data)[1]
   n.sec <- n.sec.occ    
@@ -521,11 +566,166 @@ p.or.c.array.fun<- function(CH.secondary, # can be list or array
       m <- temp.data$Prim[t]
       for(i in 1:nind){
         for(d in 1:n.sec[m]){
-          p.or.c[i,t,d] <- ifelse(sum(CH.secondary[i,m,1:(d-1)])==0,0,1)
+          dsum <- ifelse(list==TRUE,sum(CH.secondary[[m]][i,1:(d-1)]), sum(CH.secondary[i,m,1:(d-1)]))
+          p.or.c[i,t,d] <- ifelse(dsum==0,0,1)
         } #d
       } #i
     } #w
   }
   
   return(p.or.c)
+}
+
+
+#############################################################
+## all in one function to return all covariate data
+## output is a list with elements:
+# [[1]]$individual.covariates  #with tag, web, sex, month first caught
+# [[2]]$temporal.covariates # with session, long.month, month covariates, etc
+# after that are matrices of dimensions [i,m] that have the temporal covariates
+# aligned to individuals and long.month (all months not just those trapped)
+# these matrices can be plugged into models for phi[i,m]
+
+
+
+library(tidyverse,lubridate) 
+
+monthly.covariate.function <-function(
+  capture.data, # capture data frame like Zuni12.pema.data # best if cut down to data used so no overlap with tags among sites/species
+  CH.secondary, # as monthly list
+  tags, # tag names that line up to CH.secondary
+  sessions, # all sessions to include e.g. 199806 (sessions trapped even if no pema caught)
+  temporal.data=NULL, # data frame of monthly temporal data, with either a column called date or yearmon (must include months not trapped)
+  longdata=TRUE, # if TRUE, then data are long like sw.temp.data and have all the sites and all temporal data with no time lags, if false, then data are just as will be input with 
+  site=NULL, # if longdata=TRUE, e.g. "Zuni"
+  web=NULL, # if longdata=TRUE e.g., 
+  cov.list=NULL # if longdata=TRUE, list of covariates and their time lags, e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag and with a lag 1 and tmax with lag 3. 
+){
+  nind <- length(tags)
+  
+  ic <- data.frame(ID=1:nind,tag=tags)
+  
+  webi <- character()
+  sex <- numeric() #1 male, 0 female
+  for(i in 1:nind){
+    ind <- which(capture.data$tag==tags[i])
+    x <- capture.data[ind,]
+    x <- x[order(x$Session),]
+    webi[i] <- as.character(x$web[1])
+    sex[i] <- max(x$sex) # they aren't NAs but -9
+  }
+  ic$web <- factor(webi)
+  ic$sex <- replace(sex,sex==-9,0.5) #split the difference for unknown sexes
+  
+  sessions.trapped <- sort(unique(sessions))
+  
+  first.session <- sessions.trapped[1]
+  last.session <- sessions.trapped[length(sessions.trapped)]
+  first.montha <- strsplit(as.character(first.session),split=character(0))[[1]][5:6]
+  first.month <- as.numeric(paste(first.montha[1],first.montha[2],sep=""))
+  
+  first.yeara <- strsplit(as.character(first.session),split=character(0))[[1]][1:4]
+  first.year <- as.numeric(paste(first.yeara[1],first.yeara[2],first.yeara[3],first.yeara[4],sep=""))
+  last.montha <- strsplit(as.character(last.session),split=character(0))[[1]][5:6]
+  last.month <- as.numeric(paste(last.montha[1],last.montha[2],sep=""))
+  last.yeara <- strsplit(as.character(last.session),split=character(0))[[1]][1:4]
+  last.year <- as.numeric(paste(last.yeara[1],last.yeara[2],last.yeara[3],last.yeara[4],sep=""))
+  
+  
+  y <- last.year-first.year
+  ms <- c(first.month:12,rep(1:12,y-1),1:last.month)
+  ys <- c(rep(first.year,length(first.month:12)),rep((first.year+1):(last.year-1),each=12),rep(last.year,length(1:last.month)))
+  #yearmonth <- paste(as.character(ms),as.character(ys),sep="")
+  mc <- as.character(ms)
+  for(i in 1:length(ms)){
+    mc[i] <- ifelse(ms[i]<10,paste(paste(as.character(ys[i]),"0",as.character(ms[i]),sep="")),paste(paste(as.character(ys[i]),as.character(ms[i]),sep="")))
+  }
+  
+  s1 <- sessions.trapped[match(mc,sessions.trapped)]
+  not.trapped <- which(is.na(s1))
+  sn <- 1:length(sessions.trapped)
+  session.num <- sn[match(mc,sessions.trapped)]
+  for(i in 1:length(not.trapped)){
+    session.num[not.trapped[i]]<-session.num[max(which(sn<not.trapped[i]))]
+  }
+  Prim=session.num
+  Prim[which(is.na(s1))]<- NA
+  
+  month.data <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num,Prim=Prim)
+  
+  if(length(temporal.data)>0){
+    if(longdata==TRUE){
+      ls <- length(site)
+      datas <- temporal.data[grep(site[1],temporal.data$site,ignore.case=TRUE),]
+      if(ls>1){
+        for(i in 2:ls){
+          datas <- rbind(datas,temporal.data[grep(site[i],temporal.data$site,ignore.case=TRUE),])
+        }
+      }
+      lw <- length(web)
+      dataw <- datas[which(datas$web==web[1]),]
+      if(lw>1){
+        for(i in 2:lw){
+          dataw <- rbind(dataw,datas[which(datas$web==web[i]),])
+        }
+      }
+      
+      # make a wide data frame with date/yearmon going from first trapped session to last trapped session
+      wdate=lubridate::dmy(paste("1",month.data$month,month.data$year,sep="-"))
+      
+      data.w <- data.frame(date=sort(unique(wdate)))
+      data.w$year <- lubridate::year(data.w$date)
+      data.w$month <- lubridate::month(data.w$date)
+      dataw$date <- lubridate::dmy(paste("1",dataw$yearmon))
+      cl <- length(cov.list)
+      for(c in 1:cl){
+        nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+        col <- grep(names(cov.list)[c],names(dataw),ignore.case=TRUE)
+        fd <- which(dataw$date==data.w$date[1]) 
+        ld <- which(dataw$date==data.w$date[length(data.w$date)])
+        if(length(fd)==1){
+          data.w <- cbind(data.w, dataw[(fd-cov.list[[c]]):(ld-cov.list[[c]]),col])
+          names(data.w)[dim(data.w)[2]] <- nam
+        }
+        if(length(fd)>1){
+          for(i in 1:length(fd)){
+            data.w <- cbind(data.w, dataw[(fd[i]-cov.list[[c]]):(ld[i]-cov.list[[c]]),col])
+            names(data.w)[dim(data.w)[2]] <- paste(nam,paste("web",dataw$web[fd[i]],sep=""),sep=".") 
+          } 
+        }
+      }
+      month.data <- dplyr::left_join(month.data,data.w) 
+    }
+  }
+  
+  ## add first capture to individual covariates data
+  CH.primary <- primary.ch.fun(CH.secondary)
+  first.caught <- apply(CH.primary,1,function(x){min(which(x>0))}) #gives primary occasion first caught (not long.month)
+  ic$f.longmonth <- month.data$long.month[match(first.caught,month.data$Prim)]
+  
+  individual.covariates=ic
+  covariate.data <- list(individual.covariates=individual.covariates, temporal.covariates=month.data)
+  
+  # make matrices of temporal covariates matched up to individuals (temporal data for the individual based on which web they were on): dimensions [i,m], where m is longmonth - all months not just those trapped
+  
+  for(c in 1:length(cov.list)){
+    nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
+    cols <- grep(nam,names(month.data))
+    col.name <- names(month.data)[cols]
+    web.nam <- unlist(lapply(strsplit(col.name,".web"),function(x){x[2]}))
+    dat <- month.data[,cols]
+    names(dat) <- web.nam 
+    
+    mat <- matrix(NA,ncol=dim(month.data)[1], nrow=dim(individual.covariates)[1])
+    for(i in 1:dim(individual.covariates)[1]){
+      w <- individual.covariates$web[i]
+      mat[i,] <- dat[,which(names(dat)==w)]
+    } #i
+    
+    
+    covariate.data[[c+2]] <- mat
+    names(covariate.data)[[c+2]] <- nam
+  } #c
+  
+  return(covariate.data)
 }
