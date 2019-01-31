@@ -115,10 +115,10 @@ parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0"
 sptm <- proc.time()
 date()
 Z12.monthlylist.rcjs.maxcov=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
-date() 
+date() #26 hours
 eptm <- proc.time()
-eptm-ptm
-# completed, took several days, but not sure exactly how long
+eptm-sptm
+
 
 save.image("Z12monthlylistmodels.RData")
 
