@@ -76,9 +76,9 @@ cat("
     for(i in 1:nind){
       # define latent state at first capture 
       # dimensions [individual, month] spans study period not just months trapped
-      z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
+      z[i,f.longmonth[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
     
-      for(m in (f[i]+1):n.months){  
+      for(m in (f.longmonth[i]+1):n.months){  
         mu1[i, m] <- phi[i, m-1] * z[i, m-1] 
         z[i, m] ~ dbern(mu1[i, m]) 		
                 
