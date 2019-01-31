@@ -1,4 +1,4 @@
-##### Robust Design CJS with capture histories as array [indiv,prim,sec]
+####### Robust Design CJS with capture histories as array [indiv,prim,sec]
 
 # Modeling temporal and individual covariate, NDVI
 #p and c are constant
@@ -57,7 +57,7 @@ cat("
       } #m for months
     } #i for individual
     
-    # Model for p - 3 dimensions [indiv, month, day] 
+    # Model for p - 3 dimensions [indiv, month, day] #p includes months not trapped as NA
     for(i in 1:nind){
       for(m in months.trapped){
         for(d in 1:n.sec.occ[Prim[m]]){
