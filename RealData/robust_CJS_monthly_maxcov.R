@@ -89,7 +89,7 @@ cat("
       for(mt in 1:length(months.trapped)){   
         for(d in 1:n.sec.occ[mt]){
           y[i,mt,d] ~ dbern(mu2[i,mt,d]) 		  
-          mu2[i,mt,d] <- z[i, months.trapped[mt]] * p[i,mt,d]
+          mu2[i,mt,d] <- z[i, months.trapped[mt]] * p[i,months.trapped[mt],d]
         } #d
       } #mt (months trapped)
     } # i
