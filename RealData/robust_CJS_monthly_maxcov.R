@@ -1,4 +1,4 @@
-##### Robust Design CJS with capture histories as array [indiv,prim,sec]
+####### Robust Design CJS with capture histories as array [indiv,prim,sec]
 
 # Modeling temporal and individual covariate, NDVI
 #p and c are constant
