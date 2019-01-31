@@ -76,9 +76,9 @@ cat("
     for(i in 1:nind){
       # define latent state at first capture 
       # dimensions [individual, month] spans study period not just months trapped
-      z[i,f[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
+      z[i,f.longmonth[i]] <- 1		# z is true (latent) state alive or dead, know alive at first capture
     
-      for(m in (f[i]+1):n.months){  
+      for(m in (f.longmonth[i]+1):n.months){  
         mu1[i, m] <- phi[i, m-1] * z[i, m-1] 
         z[i, m] ~ dbern(mu1[i, m]) 		
                 
@@ -86,10 +86,10 @@ cat("
    
     
       # OBSERVATION PROCESS 
-      for(mt in 1:length(months.trapped)){   
+      for(mt in (f[i]+1):length(months.trapped)){   
         for(d in 1:n.sec.occ[mt]){
           y[i,mt,d] ~ dbern(mu2[i,mt,d]) 		  
-          mu2[i,mt,d] <- z[i, months.trapped[mt]] * p[i,mt,d]
+          mu2[i,mt,d] <- z[i, months.trapped[mt]] * p[i,months.trapped[mt],d]
         } #d
       } #mt (months trapped)
     } # i
