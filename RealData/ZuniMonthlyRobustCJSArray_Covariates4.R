@@ -64,7 +64,7 @@ temporal.covariates <- monthly.temporaldata.fun(
 # other elements of the list (if individual.covariates are included) are matrices of temporal covariates matching up individuals by web to their temporal data, e.g., temporal.covariates$ndvi_1 is a matrix of NDVI lag 1 with dimension [individual, month], so can be used for phi~ndvi_1[i,m]
 
 ## 
-p.or.c <- p.or.c.array.fun(CH.secondary, temporal.covariates,n.sec.occ,list=FALSE)
+p.or.c <- p.or.c.array.fun(CH.secondary, temporal.covariates$monthly.longdata,n.sec.occ,list=FALSE)
 
 # create a vector of first marking
 f <- apply(CH.primary, 1, function(x) min(which(x!=0)))
@@ -115,10 +115,10 @@ date()
 Z12.monthly.rcjs.maxcov=jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthly_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() 
 eptm <- proc.time()
-eptm-ptm
+eptm-sptm
 # completed, took several days, but not sure exactly how long
 
-save.image("Z12monthlymodels.RData")
+save.image("Z12monthlyarraymodels.RData")
 
 Z12.monthly.rcjs.maxcov
 hist.plot.fun(Z12.monthly.rcjs.maxcov)
