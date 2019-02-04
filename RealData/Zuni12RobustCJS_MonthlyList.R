@@ -119,7 +119,6 @@ date() #26 hours
 eptm <- proc.time()
 eptm-sptm
 
-
 save.image("Z12monthlylistmodels.RData")
 
 Z12.monthlylist.rcjs.maxcov
