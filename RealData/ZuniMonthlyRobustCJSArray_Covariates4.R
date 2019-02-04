@@ -116,7 +116,7 @@ Z12.monthly.rcjs.maxcov=jags.parallel(data=bugs.data,inits,parameters,"robust_CJ
 date() 
 eptm <- proc.time()
 eptm-sptm
-# completed, took several days, but not sure exactly how long
+# 32.5 hours
 
 save.image("Z12monthlyarraymodels.RData")
 
