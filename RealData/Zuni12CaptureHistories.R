@@ -65,7 +65,7 @@ Zuni12.pema.Ch.secondary <- Ch.list
   
   
 Zuni12.primary.time.int.weeks <- Zuni.primary.time.int.weeks 
-Zuni12.secondary.occasions <- Zuni.secondary.occasions
+Zuni12.secondary.occasions <- unlist(lapply(Zuni12.Session.days,length))
 
 
 
