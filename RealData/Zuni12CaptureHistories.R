@@ -5,6 +5,27 @@ sort(unique(UNMcaptures$date))
 Zuni.dates <- sort(unique(UNMcaptures$date[which(UNMcaptures$site=="Zuni")]))
 Zuni.sessions <- sort(unique(UNMcaptures$Session[which(UNMcaptures$site=="Zuni")]))
 
+Zuni1.dates <- sort(unique(UNMcaptures$date[which(UNMcaptures$site=="Zuni"&UNMcaptures$web==1)]))
+Zuni2.dates <- sort(unique(UNMcaptures$date[which(UNMcaptures$site=="Zuni"&UNMcaptures$web==2)]))
+Zuni2.nottrapped<-Zuni.dates[which(is.na(match(Zuni.dates,Zuni2.dates)))] # dates Zuni2 not trapped
+Zuni1.nottrapped <- Zuni.dates[which(is.na(match(Zuni.dates,Zuni1.dates)))] # dates Zuni1 not trapped
+
+Zuni.dates.df <- data.frame(Zuni.dates,web1=rep("yes",length(Zuni.dates)),web2=rep("yes",length(Zuni.dates)))
+levels(Zuni.dates.df$web1)[2]="no"
+levels(Zuni.dates.df$web2)[2]="no"
+Zuni.dates.df$web2[which(is.na(match(Zuni.dates,Zuni2.dates)))]="no"
+Zuni.dates.df$web1[which(is.na(match(Zuni.dates,Zuni1.dates)))]="no"
+names(Zuni.dates.df)[2:3] <- paste("web",1:2,sep=".")
+
+
+Zuni1.sessions <- sort(unique(UNMcaptures$Session[which(UNMcaptures$site=="Zuni"&UNMcaptures$web==1)]))
+Zuni2.sessions <- sort(unique(UNMcaptures$Session[which(UNMcaptures$site=="Zuni"&UNMcaptures$web==2)]))
+Zuni1.sessions[which(is.na(match(Zuni1.sessions,Zuni2.sessions)))] #sessions trapped at Zuni1 but not Zuni2
+#199412
+Zuni2.sessions[which(is.na(match(Zuni2.sessions,Zuni1.sessions)))] #sessions trapped at Zuni2 but not Zuni1
+#none
+
+
 time.int <- diff(Zuni.dates)
 first.dates <- Zuni.dates[c(1,1+which(time.int>1))]
 length(first.dates)
@@ -42,8 +63,13 @@ for(i in 1:length(first.dates)){
 ########## Basic Robust Design CJS capture histories (0 or 1) AS LIST
 # A matrix for each month (primary occasion), where column is day (secondary occasion) and row is individual. Each matrix has the same number of rows - all individuals have a row each month even though for most they will be zeros.
 ################################################################################
-IDs <- sort (unique(Zuni12.pema.data$tag))
 Session.days <- Zuni12.Session.days
+IDs <- sort (unique(Zuni12.pema.data$tag))
+ID.web <- character()
+for(i in 1:length(IDs)){
+  ID.web[i] <- as.character(Zuni12.pema.data$web[which(Zuni12.pema.data$tag==IDs[i])][1])
+}
+
 
 Ch.list <- list()
 
@@ -53,7 +79,10 @@ for(m in 1:length(Session.days)){
   
   for(d in 1:length(days)){
     for(i in 1:length(IDs)){
+      col <- which(names(Zuni.dates.df)==paste("web",ID.web[i],sep="."))
+      if(Zuni.dates.df[which(Zuni.dates.df$Zuni.dates==days[d]),col]=="yes"){ # check which web this animal is from and if that web was trapped that day, if not, it will remain an NA
       ch.mat[i,d] <- ifelse(length(which(Zuni12.pema.data$tag==IDs[i] & Zuni12.pema.data$date==days[d]))>0,1,0)
+      }
     }
   }
   dimnames(ch.mat) <- list(IDs,NULL)
