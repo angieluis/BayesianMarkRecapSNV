@@ -97,7 +97,8 @@ Zuni12.primary.time.int.weeks <- Zuni.primary.time.int.weeks
 Zuni12.secondary.occasions <- unlist(lapply(Zuni12.Session.days,length))
 
 
-
+Zuni.session.list <- list(Zuni.sessions,Zuni1.sessions,Zuni2.sessions)
+names(Zuni.session.list) <- c("all.sessions","web.1","web.2")
 ####### Temporal Covariates 
 
 #source("RobustCJSfunctions.R")

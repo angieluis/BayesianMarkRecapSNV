@@ -394,6 +394,7 @@ individual.covariate.fun <- function(data, #like UNMdata
 # function to take Robust Design capture history list of primary 
 # occasions (months) and turn it into long data frame where each 
 # row is a month (including months not trapped)
+# need to update this so that it could include NAs in the capture histories
 monthly.longdataCH.fun<-function(CH.secondary, temporal.covariate.df, individual.covariates, p_or_c=FALSE){ 
   #  add the primary occassion to the data (if not already there)
   if(length(which(colnames(CH.secondary[[1]])=="Prim"))==0){
