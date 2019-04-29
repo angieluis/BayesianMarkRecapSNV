@@ -95,8 +95,6 @@ bugs.data <- list(
   f.longmonth = covariate.data$individual.covariates$f.longmonth, # longmonth first caught, for simulating z
   p.or.c = p.or.c, # an array [i,m,d]to fit into p models
   web = covariate.data$individual.covariates$web,
-  web1.ind = which(covariate.data$individual.covariates$web==1),
-  web2.ind = which(covariate.data$individual.covariates$web==2),
   sex = covariate.data$individual.covariates$sex,#
   n.sec.occ = n.sec.occ, #
   max.secondary.occasions = max(obs.dat$Sec), 
@@ -110,28 +108,39 @@ bugs.data <- list(
   covariate.month = covariate.data$temporal.covariates$month, #1:12
   long.month = covariate.data$temporal.covariates$long.month, 
   months.trapped = covariate.data$temporal.covariates$long.month[which(is.finite(covariate.data$temporal.covariates$Prim))], #
-  web1.months.trapped = webmonths$web.1,
-  web2.months.trapped = webmonths$web.2,
   Prim = covariate.data$temporal.covariates$Prim, 
   ndvi_0 = covariate.data$ndvi_0,
   ndvi_1 = covariate.data$ndvi_1,
   tmax_3 = covariate.data$tmax_3,
-  tmin_5 = covariate.data$tmin_5
+  tmin_5 = covariate.data$tmin_5,
+  lag.mat = matrix(c(covariate.data$ndvi_0,covariate.data$ndvi_1,covariate.data$tmax_3,covariate.data$tmin_5),ncol=4),
+  n.lags = 4
 ) 
 
+#for(i in 1:length(webmonths)){
+#  nam <- unlist(strsplit(names(webmonths)[i],".",fixed=TRUE))[2]
+#  web.ind <- which(covariate.data$individual.covariates$web==nam)
+#  web.months.trapped <- webmonths[[i]]
+#  bugs.data <- list.append(bugs.data,web.ind,web.months.trapped)
+#  names(bugs.data)[(length(bugs.data)-1):length(bugs.data)] <- c(paste("web",nam,".ind",sep=""),paste("web",nam,".months.trapped",sep=""))
+#}
+
+
+#web1.ind = which(covariate.data$individual.covariates$web==1),
+#web2.ind = which(covariate.data$individual.covariates$web==2),
+#web1.months.trapped = webmonths$web.1,
+#web2.months.trapped = webmonths$web.2,
+
 #initial values
-inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1) )} 
+inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rep(0,n.lags), lag.coefT=runif(n.lags,0,1) )} 
 
 #parameters monitored
-parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month")
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month","ind","lag.coefT")
 
 
-sptm <- proc.time()
 date()
 Z12.rCJS.maxcov <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() #
-eptm <- proc.time()
-eptm-sptm
 
 save.image("Z12rCJSmaxcov.RData")
 
