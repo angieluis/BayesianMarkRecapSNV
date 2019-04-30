@@ -69,7 +69,7 @@ cat("
     
     # Model for p - 3 dimensions [indiv, month, day] #same number of months as phi (longmonths), but with NAs for months/days not trapped
     for(i in 1:nind){
-      for(m in months.trapped){
+      for(m in months.trapped.mat[i, 1:length.months.trapped[i]]){
         for(d in 1:n.sec.occ[Prim[m]]){
           logit(p[i,m,d]) <- 
             sigma.0 +             # intercept

@@ -1,9 +1,10 @@
 ##### Robust Design CJS with capture histories as array [indiv,prim,sec]
 
-# Modeling temporal and individual covariate, NDVI
-#p and c are constant
+# Modeling temporal and individual covariates on both phi and p
 
 #modeled on a monthly scale
+
+## in the process of updating code to account for months not trapped at specific webs - update p code here particular.
 
 #################################specify model in BUGS language
 sink("robust_CJS_monthlylist_maxcov.bug")
@@ -45,7 +46,6 @@ cat("
     for(i in 1:nind){
       for(m in 1:(n.months-1)){  
         # phi has  2 dimensions [indiv, and months]
-        
 
         logit(phi[i,m]) <- 
           alpha.0 + 
@@ -57,32 +57,21 @@ cat("
       } #m for months
     } #i for individual
     
-    # Model for p - 3 dimensions [indiv, month, day] #same number of months as phi (longmonths), but with NAs for months/days not trapped
-    for(i in web1.ind){
-      for(m in web1.months.trapped){
+    # Model for p: 3 dimensions [indiv, month, day] #same number of months as phi (longmonths), but with NAs for months/days not trapped
+    for(i in 1:nind){ 
+      
+      for(m in months.trapped.mat[i, 1:length.months.trapped[i]]){
         for(d in 1:n.sec.occ[Prim[m]]){
-          logit(p[i,m,d]) <- 
+          logit(p[i,m,d]) <- (
             sigma.0 +             # intercept
             sigma.recap * p.or.c[i,m,d] + #adjustment for if animal was caught previously in this primary session (0 if not caught before and 1 if so)
             sigma.male * sex[i] +   # adjustment for males (0 if female)
             sigma.month.use[covariate.month[m]] # month factor, where Jan=0
-          
+          ) 
         } #d for days
       } #m for month
     } #i for individual
     
-    for(i in web2.ind){
-      for(m in web2.months.trapped){
-        for(d in 1:n.sec.occ[Prim[m]]){
-          logit(p[i,m,d]) <- 
-          sigma.0 +             # intercept
-          sigma.recap * p.or.c[i,m,d] + #adjustment for if animal was caught previously in this primary session (0 if not caught before and 1 if so)
-          sigma.male * sex[i] +   # adjustment for males (0 if female)
-          sigma.month.use[covariate.month[m]] # month factor, where Jan=0
-    
-        } #d for days
-      } #m for month
-    } #i for individual
     
     #############Likelihood 		
     # STATE PROCESS

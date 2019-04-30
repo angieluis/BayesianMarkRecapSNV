@@ -63,10 +63,6 @@ p.or.c <- p.or.c.array.fun(CH.secondary, covariate.data$temporal.covariates,n.se
 
 ################### Do all the data manipulation in R to create long data to remove loops in the observation code
 
-# can this handle having NAs in the capture history for dates not trapped?
-## State is either 0 or 1. I need to change to NA. 
-# update function: monthly.longdataCH.fun()
-
 obs.dat <- monthly.longdataCH.fun(CH.secondary, covariate.data$temporal.covariates, covariate.data$individual.covariates)
   
 
@@ -79,6 +75,15 @@ for(i in 1:(length(session.list)-1)){
   webmonths[[i]] <- x[which(is.finite(x))]
 }
 names(webmonths) <- names(session.list)[-1]
+
+months.trapped.mat <- matrix(NA, nrow=dim(CH.secondary[[1]])[1],ncol=max(unlist(lapply(webmonths,length))))
+length.months.trapped <- numeric()
+for(i in 1:dim(months.trapped.mat)[1]){
+  webnam <- covariate.data$individual.covariates$web[i] # this is a factor currently
+  webi <- which(names(webmonths)==paste("web",webnam,sep="."))
+  length.months.trapped[i]  <- length(webmonths[[webi]])
+  months.trapped.mat[i,1:length.months.trapped[i]] <- webmonths[[webi]]
+}
 
 ### need to make the code to different webs more general so can apply to other sites with different number and differently named webs
 # same for model code (p loops)
@@ -94,6 +99,7 @@ bugs.data <- list(
   id = obs.dat$ID, # individual (row of CH)
   f.longmonth = covariate.data$individual.covariates$f.longmonth, # longmonth first caught, for simulating z
   p.or.c = p.or.c, # an array [i,m,d]to fit into p models
+  p.ind = replace(p.or.c,p.or.c==0,1),
   web = covariate.data$individual.covariates$web,
   sex = covariate.data$individual.covariates$sex,#
   n.sec.occ = n.sec.occ, #
@@ -107,7 +113,8 @@ bugs.data <- list(
   n.months = dim(covariate.data$temporal.covariates)[1], 
   covariate.month = covariate.data$temporal.covariates$month, #1:12
   long.month = covariate.data$temporal.covariates$long.month, 
-  months.trapped = covariate.data$temporal.covariates$long.month[which(is.finite(covariate.data$temporal.covariates$Prim))], #
+  months.trapped.mat = months.trapped.mat,
+  length.months.trapped = length.months.trapped, 
   Prim = covariate.data$temporal.covariates$Prim, 
   ndvi_0 = covariate.data$ndvi_0,
   ndvi_1 = covariate.data$ndvi_1,
@@ -132,7 +139,8 @@ bugs.data <- list(
 #web2.months.trapped = webmonths$web.2,
 
 #initial values
-inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rep(0,n.lags), lag.coefT=runif(n.lags,0,1) )} 
+inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rbinom(n.lags,1,0.5), #make this a random draw because chains can get sticky on 
+                      lag.coefT=runif(n.lags,0,1) )} 
 
 #parameters monitored
 parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month","ind","lag.coefT")
