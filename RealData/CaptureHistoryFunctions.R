@@ -124,6 +124,18 @@ session.list.function <- function(
 }
 
 ############################################################################
+# function to create primary CH from secondary list
+# (same function as in RobustCJSfunctions.R)
+############################################################################
+primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices 
+  x <- lapply(CH.secondary,rowSums)
+  v1 <- unlist(x)
+  CH.primary <- matrix(replace(v1, v1>1, 1), nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
+  
+  return(CH.primary)
+}
+
+############################################################################
 # Robust design Multi-State Capture Histories
 # where states are:
 #   uninfected = "1"
@@ -233,3 +245,24 @@ MS.capture.history.function <- function(
   return(Ch.list)
   
 } 
+
+####################################################################
+## create a primary multi-state capture history
+# from a secondary history (collapse to just primary occasions)
+####################################################################
+
+primary.MSch.fun <- function(CH.secondary){ # as list of monthly matrices 
+  CH.primary <- matrix(NA,nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary))
+  for(m in 1:length(CH.secondary)){
+    for(i in 1:dim(CH.secondary[[1]])[1]){
+      chs <- CH.secondary[[m]][i,]
+      if(length(which(is.na(chs)))==length(chs)){
+        CH.primary[i,m] <- NA
+      } else{
+        CH.primary[i,m] <- ifelse(sum(chs)==0,0,unique(chs[which(chs>0)]))
+      } 
+    }
+  }                     
+  
+  return(CH.primary)
+}
