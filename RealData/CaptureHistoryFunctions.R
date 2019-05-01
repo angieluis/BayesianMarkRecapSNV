@@ -110,8 +110,7 @@ return(Ch.list)
 session.list.function <- function(
   data=UNMcaptures, #assuming this data has all the dates (including those trapped but no animals/pema were caught) and is 'cleaned'
   site="Zuni",
-  webs=c("1","2"),
-  species="PM"
+  webs=c("1","2")
 ){
 
 
