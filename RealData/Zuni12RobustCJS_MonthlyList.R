@@ -148,9 +148,19 @@ parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0"
 
 date()
 Z12.rCJS.maxcov <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_maxcov.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() # 20 hours
+
+save.image("Z12rCJSmodels.RData")
+
+
+date()
+Z12.rCJS.covind <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_CovInd.bug",n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
 date() #
 
-save.image("Z12rCJSmaxcov.RData")
+save.image("Z12rCJSmodels.RData")
+
+
+
 
 Z12.rCJS.maxcov
 hist.plot.fun(Z12.rCJS.maxcov)
