@@ -10,16 +10,28 @@ setwd("~/Documents/JAGS/BayesianMarkRecapSNV/RealData")
 #setwd("~/BayesianMarkRecapSNV/RealData")  # for PC
 
 source("RobustCJSfunctions.R")
-load("Zuni12pemaCH.RData")
+source("CaptureHistoryFunctions.R")
 load("UNMdata.RData")
 sw.temp.data <- read.csv("sw_merge.csv")
 
-session.list <- Zuni.session.list
 
-CH.secondary <- Zuni12.pema.Ch.secondary
+CH.secondary <- CJS.capture.history.function(
+  data=UNMcaptures, #assuming this data has all the dates (including those trapped but no animals/pema were caught) and is 'cleaned'
+  site="Zuni",
+  webs=c("1","2"),
+  species="PM"
+)
+
+session.list <- session.list.function(data=UNMcaptures, # assuming all dates
+  site="Zuni", webs=c("1","2"))
+  
+  
+#load("Zuni12pemaCH.RData")
+#session.list <- Zuni.session.list
+#CH.secondary <- Zuni12.pema.Ch.secondary
+#time.int <- Zuni12.primary.time.int.weeks 
 
 CH.primary <- primary.ch.fun(CH.secondary)
-time.int <- Zuni12.primary.time.int.weeks 
 
 
 #rename secondary occasions from 1 to number of days #prob don't need to do this for Emily's capture history code
@@ -33,7 +45,7 @@ n.sec.occ <- unlist(lapply(CH.secondary,function(x){dim(x)[2]}))
 
 
 
-
+# check and make sure using appropriate data
 covariate.data <- monthly.covariate.function(
   capture.data=Zuni12.pema.data, #just pema so no overlap w other sites/species
   CH.secondary=CH.secondary, # list
@@ -102,10 +114,9 @@ bugs.data <- list(
   p.ind = replace(p.or.c,p.or.c==0,1),
   web = covariate.data$individual.covariates$web,
   sex = covariate.data$individual.covariates$sex,#
-  n.sec.occ = n.sec.occ, #
-  max.secondary.occasions = max(obs.dat$Sec), 
+  n.sec.occ = n.sec.occ, # vector of number of secondary occasions 
+  max.secondary.occasions = max(obs.dat$Sec), # not currently using
   n.primary.occasions = max(obs.dat$Prim), 
-  #time.int = time.int,
   monthlyCH = monthlyCH,
   z = known.state.cjs(monthlyCH),
   cjs.init.z=cjs.init.z,
@@ -124,19 +135,6 @@ bugs.data <- list(
   n.lags = 4
 ) 
 
-#for(i in 1:length(webmonths)){
-#  nam <- unlist(strsplit(names(webmonths)[i],".",fixed=TRUE))[2]
-#  web.ind <- which(covariate.data$individual.covariates$web==nam)
-#  web.months.trapped <- webmonths[[i]]
-#  bugs.data <- list.append(bugs.data,web.ind,web.months.trapped)
-#  names(bugs.data)[(length(bugs.data)-1):length(bugs.data)] <- c(paste("web",nam,".ind",sep=""),paste("web",nam,".months.trapped",sep=""))
-#}
-
-
-#web1.ind = which(covariate.data$individual.covariates$web==1),
-#web2.ind = which(covariate.data$individual.covariates$web==2),
-#web1.months.trapped = webmonths$web.1,
-#web2.months.trapped = webmonths$web.2,
 
 #initial values
 inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rbinom(n.lags,1,0.5), #make this a random draw because chains can get sticky on 
