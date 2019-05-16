@@ -1,0 +1,248 @@
+################################################################
+# function to calculate MNAs (in dataframe with sessions & 
+# longmonths, including sessions not trapped as NAs)
+################################################################
+
+library(zoo)
+MNA.function <- function(data=UNMdata, # capture data 
+                         site="Zuni", # 1 site at a time
+                         web=1, # 1 web at a time
+                         species="pm", # can put in more than 1
+                         sessions=session.list$web.1 # sessions trapped
+                         ){
+  # output is dataframe with columns:
+  # long.month: from 1 to number of total months spanned (could be more than months trapped)
+  # session
+  # year
+  # month
+  # Prim: primary occasion from 1 to number of months trapped
+  # MNA: this will include NAs for months not trapped
+  # MNA.interp : interpolated values for NAs (mean of previous & next)
+  
+  data=data[grep(site,data$site,ignore.case=TRUE),]
+  data1=data[which(data$web==web),]
+  
+  data=data1[grep(species[1],data1$letter_2,ignore.case=TRUE),]
+  if(length(species)>1){
+    for(i in 2:length(species)){
+      data=rbind(data,data1[grep(species[i],data1$letter_2,ignore.case=TRUE),])
+    }
+  }
+  
+  tags=as.character(sort(unique(data$tag)))
+  if(length(which(tags=="-9"))>0){
+    tags=tags[-which(tags=="-9")]}
+  
+  ch=matrix(NA,ncol=length(sessions),nrow=length(tags),dimnames=list(tags,sessions))
+  
+  for(i in 1:length(tags)){
+    for(j in 1:length(sessions)){
+      ch[i,j] =length(which(data$tag==tags[i]&data$Session==sessions[j]))
+    }
+  }
+  
+  #plot.ts(apply(ch,2,sum))
+  
+  ch2=replace(ch,ch>1,1)
+  #lines(apply(ch2,2,sum))
+  
+  chMNA=ch2
+  
+  for(i in 1:length(tags)){
+    x=which(ch2[i,]>0)
+    if(length(x)>1){
+      if(min(x)<(max(x)-1)){
+        chMNA[i,min(x):max(x)]=1			
+      }
+    }
+  }
+  
+  MNA=apply(chMNA,2,sum)
+
+   
+#  MNA2=rep(NA,length(MNA))
+#  for(i in 1:length(sessions)){
+#    if(length(which(data$Session==sessions[i]))>0){
+#      MNA2[i]=MNA[i]
+#    }
+#  }
+  
+  
+  sessions.trapped <- sessions
+  
+  first.session <- sessions.trapped[1]
+  last.session <- sessions.trapped[length(sessions.trapped)]
+  first.montha <- strsplit(as.character(first.session),split=character(0))[[1]][5:6]
+  first.month <- as.numeric(paste(first.montha[1],first.montha[2],sep=""))
+  
+  first.yeara <- strsplit(as.character(first.session),split=character(0))[[1]][1:4]
+  first.year <- as.numeric(paste(first.yeara[1],first.yeara[2],first.yeara[3],first.yeara[4],sep=""))
+  last.montha <- strsplit(as.character(last.session),split=character(0))[[1]][5:6]
+  last.month <- as.numeric(paste(last.montha[1],last.montha[2],sep=""))
+  last.yeara <- strsplit(as.character(last.session),split=character(0))[[1]][1:4]
+  last.year <- as.numeric(paste(last.yeara[1],last.yeara[2],last.yeara[3],last.yeara[4],sep=""))
+  
+  
+  y <- last.year-first.year
+  ms <- c(first.month:12,rep(1:12,y-1),1:last.month)
+  ys <- c(rep(first.year,length(first.month:12)),rep((first.year+1):(last.year-1),each=12),rep(last.year,length(1:last.month)))
+  #yearmonth <- paste(as.character(ms),as.character(ys),sep="")
+  mc <- as.character(ms)
+  for(i in 1:length(ms)){
+    mc[i] <- ifelse(ms[i]<10,paste(paste(as.character(ys[i]),"0",as.character(ms[i]),sep="")),paste(paste(as.character(ys[i]),as.character(ms[i]),sep="")))
+  }
+  
+  s1 <- sessions.trapped[match(mc,sessions.trapped)]
+  not.trapped <- which(is.na(s1))
+  sn <- 1:length(sessions.trapped)
+  session.num <- sn[match(mc,sessions.trapped)]
+  for(i in 1:length(not.trapped)){
+    session.num[not.trapped[i]]<-session.num[max(which(sn<not.trapped[i]))]
+  }
+  Prim=session.num
+  Prim[which(is.na(s1))]<- NA
+  
+  MNA.data <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,Prim=Prim, MNA=MNA[match(s1,sessions)], MNA.interp = na.approx(MNA[match(s1,sessions)],1:length(s1)))
+  
+  return(MNA.data)
+  
+}
+
+
+
+################################################################
+# function to create dataframe of all species MNAs for a site
+# and diversity indices 
+################################################################
+#Using the vegan package to calculate diversity indices
+library(vegan)
+library(stringr)
+diversity.df.function <- function(data=UNMdata, # capture data 
+                                  site="Zuni", # 1 site at a time
+                                  web=1, # 1 web at a time
+                                  sessions=session.list$web.1 # sessions trapped
+){
+  
+  data <- data[grep(site,data$site,ignore.case=TRUE),]
+  data <- data[which(data$web==web),]
+  
+  species <- sort(unique(str_to_lower(data$letter_2)))
+  species <- species[-which(species=="-9")]
+  species <- species[-which(species=="")]
+  # check that each of these species has at least one tag number associated with it
+  t <- numeric()
+  for(i in 1:length(species)){
+    dt <- sort(unique(data$tag[grep(species[i],data$letter_2,ignore.case=TRUE)]))
+    baddies <- which(dt=="-9"|dt==""|is.na(dt))
+    if(length(baddies)>0){
+      dt <- dt[-baddies]
+    }
+    t[i] <- length(dt)
+  }
+  
+  #remove species with no tag numbers
+  sb <- which(t==0) 
+  if(length(sb)>0){
+    species <- species[-sb]
+  }   
+  
+  MNAs <- MNA.function(data=data, site=site, web=web, species=species[1], sessions=sessions)[,-7] # remove the interpolated MNA (may want)
+  names(MNAs)[which(names(MNAs)=="MNA")] <- species[1]
+
+  for(i in 2:length(species)){ 
+    MNAs <- data.frame(MNAs,MNA=MNA.function(data=data, site=site, web=web, species=species[i], sessions=sessions)$MNA)
+    names(MNAs)[which(names(MNAs)=="MNA")] <- species[i]
+  }
+  
+
+  mna <- MNAs[,6:dim(MNAs)[2]]
+  # remove pm from the diversity calculations
+  mna <- mna[,-which(names(mna)=="pm")]
+
+    ShannonH <- diversity(mna,index="shannon")
+    SimpsonD <- diversity(mna,index="simpson")
+    invSimpsonD <- diversity(mna,index="invsimpson")
+    speciesN <- specnumber(mna)
+  
+    # sum up all peromyscus species (other than pm)
+    pero.ind <- match(c("pb","pe","pl","pn","ps","pt"),names(MNAs))
+    pero.ind <- pero.ind[which(is.finite(pero.ind))]
+    peros <- apply(MNAs[,pero.ind],1,sum)
+    # sum up all species density besides pm 
+    other.sp <- apply(mna,1,sum)
+
+  MNAs.diversity=data.frame(site=rep(site,dim(MNAs)[1]), web=rep(web,dim(MNAs)[1]),MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
+
+  return(MNAs.diversity)
+}
+
+
+
+################################################################
+# function to create dataframe of all species MNAs for a site
+# and diversity indices
+### interpolating the NAs
+################################################################
+#Using the vegan package to calculate diversity indices
+library(vegan)
+library(stringr)
+diversity.df.interp.function <- function(data=UNMdata, # capture data 
+                                  site="Zuni", # 1 site at a time
+                                  web=1, # 1 web at a time
+                                  sessions=session.list$web.1 # sessions trapped
+){
+  
+  data <- data[grep(site,data$site,ignore.case=TRUE),]
+  data <- data[which(data$web==web),]
+  
+  species <- sort(unique(str_to_lower(data$letter_2)))
+  species <- species[-which(species=="-9")]
+  species <- species[-which(species=="")]
+  # check that each of these species has at least one tag number associated with it
+  t <- numeric()
+  for(i in 1:length(species)){
+    dt <- sort(unique(data$tag[grep(species[i],data$letter_2,ignore.case=TRUE)]))
+    baddies <- which(dt=="-9"|dt==""|is.na(dt))
+    if(length(baddies)>0){
+      dt <- dt[-baddies]
+    }
+    t[i] <- length(dt)
+  }
+  
+  #remove species with no tag numbers
+  sb <- which(t==0) 
+  if(length(sb)>0){
+    species <- species[-sb]
+  }   
+  
+  MNAs <- MNA.function(data=data, site=site, web=web, species=species[1], sessions=sessions)[,-6] # remove the non-interpolated MNA 
+  names(MNAs)[which(names(MNAs)=="MNA.interp")] <- species[1]
+  
+  for(i in 2:length(species)){ 
+    MNAs <- data.frame(MNAs,MNA.interp=MNA.function(data=data, site=site, web=web, species=species[i], sessions=sessions)$MNA.interp)
+    names(MNAs)[which(names(MNAs)=="MNA.interp")] <- species[i]
+  }
+  
+  
+  mna <- MNAs[,6:dim(MNAs)[2]]
+  # remove pm from the diversity calculations
+  mna <- mna[,-which(names(mna)=="pm")]
+  
+  ShannonH <- diversity(mna,index="shannon")
+  SimpsonD <- diversity(mna,index="simpson")
+  invSimpsonD <- diversity(mna,index="invsimpson")
+  speciesN <- specnumber(mna)
+  
+  # sum up all peromyscus species (other than pm)
+  pero.ind <- match(c("pb","pe","pl","pn","ps","pt"),names(MNAs))
+  pero.ind <- pero.ind[which(is.finite(pero.ind))]
+  peros <- apply(MNAs[,pero.ind],1,sum)
+  # sum up all species density besides pm 
+  other.sp <- apply(mna,1,sum)
+  
+  MNAs.diversity=data.frame(site=rep(site,dim(MNAs)[1]), web=rep(web,dim(MNAs)[1]), MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
+  
+  
+  
+  return(MNAs.diversity)
+}
