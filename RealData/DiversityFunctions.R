@@ -182,18 +182,25 @@ diversity.df.function <- function(data=UNMdata, # capture data
 # function to create dataframe of all species MNAs for a site
 # and diversity indices
 ### interpolating the NAs
+## need to make this work for multiple webs at a site
 ################################################################
 #Using the vegan package to calculate diversity indices
 library(vegan)
 library(stringr)
 diversity.df.interp.function <- function(data=UNMdata, # capture data 
                                   site="Zuni", # 1 site at a time
-                                  web=1, # 1 web at a time
-                                  sessions=session.list$web.1 # sessions trapped
+                                  web=1, # trying for multiple webs
+                                  sessions=session.list$web.1 # sessions trapped - may want to change to specify different sessions for different webs?
 ){
   
-  data <- data[grep(site,data$site,ignore.case=TRUE),]
-  data <- data[which(data$web==web),]
+  data1 <- data[grep(site,data$site,ignore.case=TRUE),]
+  data <- data1[which(data1$web==web[1]),]
+  
+  if(length(web)>1){
+    for(i in 2:length(species)){
+      data=rbind(data,data1[which(data1$web==web[i]),])
+    }
+  }
   
   species <- sort(unique(str_to_lower(data$letter_2)))
   species <- species[-which(species=="-9")]
@@ -215,16 +222,28 @@ diversity.df.interp.function <- function(data=UNMdata, # capture data
     species <- species[-sb]
   }   
   
-  MNAs <- MNA.function(data=data, site=site, web=web, species=species[1], sessions=sessions)[,-6] # remove the non-interpolated MNA 
-  names(MNAs)[which(names(MNAs)=="MNA.interp")] <- species[1]
   
-  for(i in 2:length(species)){ 
-    MNAs <- data.frame(MNAs,MNA.interp=MNA.function(data=data, site=site, web=web, species=species[i], sessions=sessions)$MNA.interp)
-    names(MNAs)[which(names(MNAs)=="MNA.interp")] <- species[i]
+  MNAs <- data.frame()
+  # need to specify names of columns here so can merge below
+  
+  w <- 1
+  while(w <= length(web)){
+    # set up dataframe with sessions but no MNAs yet
+    MNAs.w <- MNA.function(data=data, site=site, web=web[1], species=species[1], sessions=sessions)
+    MNAs.w <- MNAs.w[,1:which(names(MNAs.w)=="Prim")]  
+    
+    for(i in 1:length(species)){ 
+      MNAs.w <- data.frame(MNAs.w,MNA.interp=MNA.function(data=data, site=site, web=web[w], species=species[i], sessions=sessions)$MNA.interp)
+      names(MNAs.w)[which(names(MNAs.w)=="MNA.interp")] <- species[i]
+      
+    }
+    MNAs.w <- data.frame(site=site, web=web[w], MNAs.w)
+    MNAs <- merge(MNAs.w,MNAs,all=TRUE)
+  
+    w <- w+1
   }
-  
-  
-  mna <- MNAs[,6:dim(MNAs)[2]]
+  # datafram of just MNAs - removing sessions etc
+  mna <- MNAs[,(which(names(MNAs)=="Prim")+1):dim(MNAs)[2]]
   # remove pm from the diversity calculations
   mna <- mna[,-which(names(mna)=="pm")]
   
@@ -240,7 +259,7 @@ diversity.df.interp.function <- function(data=UNMdata, # capture data
   # sum up all species density besides pm 
   other.sp <- apply(mna,1,sum)
   
-  MNAs.diversity=data.frame(site=rep(site,dim(MNAs)[1]), web=rep(web,dim(MNAs)[1]), MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
+  MNAs.diversity=data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
   
   
   
