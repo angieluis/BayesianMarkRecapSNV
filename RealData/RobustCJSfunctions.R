@@ -589,27 +589,46 @@ p.or.c.array.fun<- function(CH.secondary, # can be list or array
 
 
 
-library(tidyverse,lubridate) 
+library(tidyverse,lubridate,stringr) 
+#source('~/Documents/JAGS/BayesianMarkRecapSNV/RealData/DiversityFunctions.R')
+# might want to put those functions in here too
 
 monthly.covariate.function <-function(
-  capture.data, # capture data frame like Zuni12.pema.data # best if cut down to data used so no overlap with tags among sites/species
+  capture.data, # capture data frame like Zuni12.pema.data. best if cut down 
+                # to data used so no overlap with tags among sites/species
+                # or specify tags by site.tag and say so below
   CH.secondary, # as monthly list
   tags, # tag names that line up to CH.secondary
-  sessions, # all sessions to include e.g. 199806 (sessions trapped even if no pema caught)
-  temporal.data=NULL, # data frame of monthly temporal data, with either a column called date or yearmon (must include months not trapped)
-  longdata=TRUE, # if TRUE, then data are long like sw.temp.data and have all the sites and all temporal data with no time lags, if false, then data are just as will be input with 
-  site=NULL, # if longdata=TRUE, e.g. "Zuni"
-  web=NULL, # if longdata=TRUE e.g., 
-  cov.list=NULL # if longdata=TRUE, list of covariates and their time lags, e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag and with a lag 1 and tmax with lag 3. 
+  by.sitetag=FALSE, # if TRUE, then tags are specified by site e.g., "Zuni.1101"
+  sessions, # all sessions to include e.g. 199806 (sessions trapped even if no pm caught)
+  temporal.data=NULL, # data frame of monthly temporal data, with either a column 
+                      # called date or yearmon (must include months not trapped), 
+                      # must be in long format like sw.temp.data and have all the
+                      # sites and all temporal data with no time lags
+  diversity.data=NULL, # data frame of species MNAs and diversities from 
+                      # diversity.df.function(), species 2 letter codes in lowercase
+                      # cov.list below much match column headers
+                      # now, some diversity data is Inf - how deal 
+  site=NULL, #  e.g. "Zuni"
+  web=NULL, #  e.g. c("1","2"), 
+  cov.list=NULL # list of temporal covariates and their time lags, 
+                # e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag 
+                # and with a lag 1 and tmax with lag 3. 
 ){
   nind <- length(tags)
-  
+  #site.tag <- paste(str_to_lower(site),tags,sep=".")
   ic <- data.frame(ID=1:nind,tag=tags)
   
   webi <- character()
   sex <- numeric() #1 male, 0 female
   for(i in 1:nind){
-    ind <- which(capture.data$tag==tags[i])
+    if(by.sitetag==FALSE){
+      ind <- which(capture.data$tag==tags[i])
+    } else{
+      tagi <- str_split(tags[i],"[.]")[[1]][2]
+      sitei <- str_split(tags[i],"[.]")[[1]][1]
+      ind <- which(capture.data$tag==tagi & str_to_lower(capture.data$site)==sitei)
+    }
     x <- capture.data[ind,]
     x <- x[order(x$Session),]
     webi[i] <- as.character(x$web[1])
@@ -654,8 +673,8 @@ monthly.covariate.function <-function(
   
   month.data <- data.frame(long.month=1:length(ms),session= s1,year=ys,month=ms,covariate.prim=session.num,Prim=Prim)
   
-  if(length(temporal.data)>0){
-    if(longdata==TRUE){
+  if(length(temporal.data)>0){ # |length(diversity.data)>0
+    
       ls <- length(site)
       datas <- temporal.data[grep(site[1],temporal.data$site,ignore.case=TRUE),]
       if(ls>1){
@@ -671,6 +690,7 @@ monthly.covariate.function <-function(
         }
       }
       
+      
       # make a wide data frame with date/yearmon going from first trapped session to last trapped session
       wdate=lubridate::dmy(paste("1",month.data$month,month.data$year,sep="-"))
       
@@ -678,6 +698,17 @@ monthly.covariate.function <-function(
       data.w$year <- lubridate::year(data.w$date)
       data.w$month <- lubridate::month(data.w$date)
       dataw$date <- lubridate::dmy(paste("1",dataw$yearmon))
+      
+      # now paste in diversity data if present 
+      if(length(diversity.data)>0){
+        #use dates to line up diversity data to temporal data, then add NAs elswhere
+        diversity.data$date <- lubridate::dmy(paste("1",diversity.data$month,diversity.data$year,sep="-"))
+        # then below replace NAs 
+        diversity.data$site <- str_to_lower(diversity.data$site)
+        dataw <- dplyr::left_join(dataw,diversity.data)
+      }
+      
+      
       cl <- length(cov.list)
       for(c in 1:cl){
         nam <- paste(names(cov.list)[c],cov.list[[c]],sep="_")
@@ -697,7 +728,7 @@ monthly.covariate.function <-function(
       }
       month.data <- dplyr::left_join(month.data,data.w) 
     }
-  }
+  #}
   
   ## add first capture to individual covariates data
   CH.primary <- primary.ch.fun(CH.secondary)
