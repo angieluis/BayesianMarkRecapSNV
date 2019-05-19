@@ -129,7 +129,8 @@ diversity.df.function <- function(
         sites="Zuni", # 1 site at a time
         webs=1, # trying for multiple webs
         sessions=session.list$web.1, # sessions trapped - may want to change to specify different sessions for different webs? (so will put in NA before or after ever trapping?)
-        interpolate=FALSE # do you want to interpolate NAs?
+        interpolate=FALSE, # do you want to interpolate NAs?
+        scale=FALSE # do you want to scale each one between 0 and 1 (divide by max) - this is needed for CJS models
                                   
 ){
   
@@ -165,6 +166,9 @@ diversity.df.function <- function(
     
     for(i in 1:length(species)){ 
       MNA.sp <- MNA.function(data=data, site=sites, web=webs[w], species=species[i], sessions=sessions)[,ifelse(interpolate==TRUE,7,6)]
+      if(scale==TRUE){
+        MNA.sp <- MNA.sp/max(MNA.sp,na.rm=TRUE)
+      }
       MNAs.w <- data.frame(MNAs.w,MNA.sp)
       names(MNAs.w)[which(names(MNAs.w)=="MNA.sp")] <- species[i]
       
