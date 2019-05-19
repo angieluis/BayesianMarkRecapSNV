@@ -130,7 +130,8 @@ diversity.df.function <- function(
         webs=1, # trying for multiple webs
         sessions=session.list$web.1, # sessions trapped - may want to change to specify different sessions for different webs? (so will put in NA before or after ever trapping?)
         interpolate=FALSE, # do you want to interpolate NAs?
-        scale=FALSE # do you want to scale each one between 0 and 1 (divide by max) - this is needed for CJS models
+        scale=FALSE, # do you want to scale each one between 0 and 1 (divide by max) - this is needed for CJS models
+        include.pm = TRUE # reviewers wanted diversity indices calculated with pm removed (include.pm=FALSE), but removing pm leads to Inf in invSimpsonD calculations (when no other species are present)
                                   
 ){
   
@@ -166,9 +167,6 @@ diversity.df.function <- function(
     
     for(i in 1:length(species)){ 
       MNA.sp <- MNA.function(data=data, site=sites, web=webs[w], species=species[i], sessions=sessions)[,ifelse(interpolate==TRUE,7,6)]
-      if(scale==TRUE){
-        MNA.sp <- MNA.sp/max(MNA.sp,na.rm=TRUE)
-      }
       MNAs.w <- data.frame(MNAs.w,MNA.sp)
       names(MNAs.w)[which(names(MNAs.w)=="MNA.sp")] <- species[i]
       
@@ -183,9 +181,10 @@ diversity.df.function <- function(
   }
   # dataframe of just MNAs - removing sessions etc
   mna <- MNAs[,(which(names(MNAs)=="Prim")+1):dim(MNAs)[2]]
-  # remove pm from the diversity calculations
-  mna <- mna[,-which(names(mna)=="pm")]
-  
+  # remove pm from the diversity calculations if indicated
+  if(include.pm==FALSE){
+    mna <- mna[,-which(names(mna)=="pm")]
+  }
   ShannonH <- diversity(mna,index="shannon")
   SimpsonD <- diversity(mna,index="simpson")
   invSimpsonD <- diversity(mna,index="invsimpson")
@@ -198,9 +197,14 @@ diversity.df.function <- function(
   # sum up all species density besides pm 
   other.sp <- apply(mna,1,sum)
   
-  MNAs.diversity=data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
   
+  MNAs.diversity <- data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
   
+  if(scale==TRUE){
+    # leave columns 1-7, the rest of the columns divide by max of column
+    scale.MNAs <- apply(MNAs.diversity[,8:dim(MNAs.diversity)[2]],2,function(x){x/max(x,na.rm=TRUE)}) 
+    MNAs.diversity <- cbind(MNAs.diversity[,1:7],scale.MNAs)
+  }
   
   return(MNAs.diversity)
 }
