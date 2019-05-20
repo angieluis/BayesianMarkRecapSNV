@@ -171,7 +171,7 @@ diversity.df.function <- function(
       names(MNAs.w)[which(names(MNAs.w)=="MNA.sp")] <- species[i]
       
     }
-    MNAs.w <- data.frame(site=site, web=as.character(webs[w]), MNAs.w)
+    MNAs.w <- data.frame(site=sites, web=as.character(webs[w]), MNAs.w)
     if(w==1){
       MNAs <- MNAs.w
     }else{
