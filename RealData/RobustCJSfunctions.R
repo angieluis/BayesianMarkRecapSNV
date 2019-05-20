@@ -607,8 +607,8 @@ monthly.covariate.function <-function(
                       # sites and all temporal data with no time lags
   diversity.data=NULL, # data frame of species MNAs and diversities from 
                       # diversity.df.function(), species 2 letter codes in lowercase
-                      # cov.list below much match column headers
-                      # now, some diversity data is Inf - how deal 
+                      # cov.list below must match column headers
+                      # input should be scaled (scale=TRUE in fxn)
   site=NULL, #  e.g. "Zuni"
   web=NULL, #  e.g. c("1","2"), 
   cov.list=NULL # list of temporal covariates and their time lags, 
@@ -703,7 +703,6 @@ monthly.covariate.function <-function(
       if(length(diversity.data)>0){
         #use dates to line up diversity data to temporal data, then add NAs elswhere
         diversity.data$date <- lubridate::dmy(paste("1",diversity.data$month,diversity.data$year,sep="-"))
-        # then below replace NAs 
         diversity.data$site <- str_to_lower(diversity.data$site)
         dataw <- dplyr::left_join(dataw,diversity.data)
       }
@@ -726,7 +725,19 @@ monthly.covariate.function <-function(
           } 
         }
       }
-      month.data <- dplyr::left_join(month.data,data.w) 
+      month.data <- dplyr::left_join(month.data,data.w)
+      
+      ind.na <- which(is.na(month.data),arr.ind = TRUE)
+      ind.na <- ind.na[-which(ind.na[,2]<8),] # these columns have NAs that need to be filled for CJS models to run. They are likely the first time points when there is a lag. So fill in the next value.
+      
+      if(dim(ind.na)[1]>0){
+        for(i in 1:dim(ind.na)[1]){
+          #find the next finite value after this one and plug it in
+          vi <- which(is.finite(month.data[,ind.na[i,2]]))
+          vin <- vi[min(which(vi > ind.na[i,1]))]
+          month.data[ind.na[i,1],ind.na[i,2]] <- month.data[vin,ind.na[i,2]]
+        }
+      }
     }
   #}
   
