@@ -99,6 +99,14 @@ for(i in 1:dim(months.trapped.mat)[1]){
 
 ### need to make the code to different webs more general so can apply to other sites with different number and differently named webs
 # same for model code (p loops)
+n.covariates <- 4
+covariate.array <- array(c(
+  covariate.data$ndvi_0, #1
+  covariate.data$ndvi_1, #2
+  covariate.data$tmax_3, #3
+  covariate.data$tmin_5  #4
+  ), dim=c(dim(covariate.data$ndvi_0),n.covariates))
+
 
 ##### Bundle data
 bugs.data <- list(
@@ -131,17 +139,17 @@ bugs.data <- list(
   ndvi_1 = covariate.data$ndvi_1,
   tmax_3 = covariate.data$tmax_3,
   tmin_5 = covariate.data$tmin_5,
-  lag.mat = matrix(c(covariate.data$ndvi_0,covariate.data$ndvi_1,covariate.data$tmax_3,covariate.data$tmin_5),ncol=4),
-  n.lags = 4
+  covariate.array = covariate.array,
+  n.covariates = n.covariates
 ) 
 
 
 #initial values
-inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rbinom(n.lags,1,0.5), #make this a random draw because chains can get sticky on 
-                      lag.coefT=runif(n.lags,0,1) )} 
+inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_0=runif(1,0,1), alpha.ndvi_1=runif(1,0,1),alpha.tmax_3=runif(1,0,1), alpha.tmin_5=runif(1,0,1), alpha.male=runif(1,0,1), alpha.month.ndvi_1=runif(11,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1), ind=rbinom(n.covariates,1,0.5), #make this a random draw because chains can get sticky on 
+                      cov.coefT=runif(n.covariates,0,1) )} 
 
 #parameters monitored
-parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month","ind","lag.coefT")
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_0", "alpha.ndvi_1","alpha.tmax_3","alpha.tmin_5","alpha.male","alpha.month.ndvi_1","sigma.0","sigma.recap","sigma.male","sigma.month","ind","cov.coefT")
 
 
 date()

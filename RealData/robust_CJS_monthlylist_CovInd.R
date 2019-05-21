@@ -34,10 +34,10 @@ cat("
       # see https://darrenjw.wordpress.com/2012/11/20/getting-started-with-bayesian-variable-selection-using-jags-and-rjags/
       # about variable selection
 
-    for(i in 1:n.lags){
+    for(i in 1:n.covariates){
       ind[i] ~ dbern(pind)
-      lag.coefT[i] ~ dnorm(0,0.4)  
-      lag.coef[i] <- ind[i]*lag.coefT[i]
+      cov.coefT[i] ~ dnorm(0,0.4)  
+      cov.coef[i] <- ind[i]*cov.coefT[i]
     }
 
 
@@ -67,7 +67,7 @@ cat("
           alpha.0 + 
           alpha.male * sex[i] +         #0 if female, 1 if male
           alpha.month.use[covariate.month[m]] +
-          inprod(lag.mat[i,],lag.coef)
+          inprod(covariate.array[i,m,],cov.coef)
       } #m for months
     } #i for individual
     
