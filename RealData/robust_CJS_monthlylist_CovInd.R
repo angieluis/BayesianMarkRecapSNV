@@ -27,12 +27,16 @@ cat("
       
     }
     alpha.month.use <- c(0,alpha.month)
+
+    pind ~ dbeta(1,3) # prior on proportion of covariates to include (greater probability of choosing fewer)
     
     ## add indicator variable for 3, 6 , 12 month lag for NDVI
+      # see https://darrenjw.wordpress.com/2012/11/20/getting-started-with-bayesian-variable-selection-using-jags-and-rjags/
+      # about variable selection
 
     for(i in 1:n.lags){
-      ind[i] ~ dbern(0.2)
-      lag.coefT[i] ~ dnorm(0,0.4)
+      ind[i] ~ dbern(pind)
+      lag.coefT[i] ~ dnorm(0,0.4)  
       lag.coef[i] <- ind[i]*lag.coefT[i]
     }
 
