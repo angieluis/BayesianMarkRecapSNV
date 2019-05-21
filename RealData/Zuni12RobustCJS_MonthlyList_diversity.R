@@ -10,7 +10,11 @@ setwd("~/Documents/JAGS/BayesianMarkRecapSNV/RealData")
 #setwd("~/BayesianMarkRecapSNV/RealData")  # for PC
 
 load("Zuni12pemaCH.RData")
-load("DiversityDataZuni12.RData")
+load("DiversityDataZuni12.RData") #or:
+# source("DiversityFunctions.R")
+# MNAs.diversityZ12 <- diversity.df.function(webs=1:2,interpolate=TRUE,scale=TRUE)
+
+source("RobustCJSfunctions.R")
 session.list <- Zuni.session.list
 CH.secondary <- Zuni12.pema.Ch.secondary
 sw.temp.data <- read.csv("sw_merge.csv")
@@ -25,7 +29,6 @@ for(i in 1:length(CH.secondary)){
 
 # number of secondary occasions
 n.sec.occ <- unlist(lapply(CH.secondary,function(x){dim(x)[2]}))
-
 
 
 # check and make sure using appropriate data
@@ -121,23 +124,34 @@ bugs.data <- list(
 
 
 #initial values
-inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  alpha.ndvi_2=runif(1,0,1), alpha.pt_0=runif(1,0,1), alpha.pt_1=runif(1,0,1), alpha.ShannonH_0=runif(1,0,1), alpha.male=runif(1,0,1),sigma.0=runif(1,0,1), sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1) )} 
+inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1),mean.p=runif(1,0,1),
+                      mean.c=runif(1,0,1),alpha.0=runif(1,0,1),alpha.month=runif(11,0,1),  
+                      alpha.ndvi_2=runif(1,0,1), alpha.pt_0=runif(1,0,1), alpha.pt_1=runif(1,0,1), 
+                      alpha.ShannonH_0=runif(1,0,1), alpha.male=runif(1,0,1),sigma.0=runif(1,0,1), 
+                      sigma.recap=runif(1,0,1),sigma.male=runif(1,0,1),sigma.month=runif(11,0,1) )} 
 
 #parameters monitored
-parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_2", "alpha.pt_0","alpha.pt_1","alpha.ShannonH_0","alpha.male","sigma.0","sigma.recap","sigma.male","sigma.month")
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","alpha.ndvi_2", "alpha.pt_0",
+             "alpha.pt_1","alpha.ShannonH_0","alpha.male","sigma.0","sigma.recap","sigma.male","sigma.month")
 
 
 date()
-Z12.rCJS.diversity <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_diversity.bug",n.chains=3,n.thin=6,n.iter=10,n.burnin=5)
+Z12.rCJS.diversity <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_diversity.bug",
+                                    n.chains=3,n.thin=6,n.iter=10,n.burnin=5)
 date() 
 save.image("Z12rCJSdiversitymod.RData")
+
+
+
 
 date()
-Z12.rCJS.diversity2 <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_diversity2.bug",n.chains=2,n.thin=6,n.iter=10000,n.burnin=5000)
-date() 
+Z12.rCJS.diversity2 <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_diversity2.bug",
+                                     n.chains=3,n.thin=6,n.iter=10000,n.burnin=5000)
+date() #20 hours
 save.image("Z12rCJSdiversitymod.RData")
 
-
+library(mcmcplots)
+mcmcplot( Z12.rCJS.diversity2)
 
 
 Z12.rCJS.maxcov
