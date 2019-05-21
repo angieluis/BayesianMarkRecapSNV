@@ -32,7 +32,7 @@ cat("
       # see https://darrenjw.wordpress.com/2012/11/20/getting-started-with-bayesian-variable-selection-using-jags-and-rjags/
       # about variable selection
 
-    for(cov in 1:dim(covariate.array)[3]){
+    for(cov in 1:n.covariates){
       ind[cov] ~ dbern(pind)
       cov.coefT[cov] ~ dnorm(0,0.4)  
       cov.coef[cov] <- ind[cov]*cov.coefT[cov]

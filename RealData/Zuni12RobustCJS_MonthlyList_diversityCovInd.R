@@ -134,7 +134,8 @@ bugs.data <- list(
   months.trapped.mat = months.trapped.mat,
   length.months.trapped = length.months.trapped, 
   Prim = covariate.data$temporal.covariates$Prim, 
-  covariate.array = covariate.array
+  covariate.array = covariate.array,
+  n.covariates = n.covariates
 ) 
 
 
@@ -152,7 +153,7 @@ parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","pind","cov.co
 
 
 date()
-Z12.rCJS.diversityCovInd <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_diversity.bug",n.chains=3,n.thin=6,n.iter=10,n.burnin=5)
+Z12.rCJS.diversityCovInd <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_CovIndDiversity.bug",n.chains=3,n.thin=1,n.iter=10,n.burnin=5)
 date() 
 save.image("Z12rCJSdiversityCovInd.RData")
 
@@ -160,7 +161,7 @@ save.image("Z12rCJSdiversityCovInd.RData")
 
 
 library(mcmcplots)
-mcmcplot( Z12.rCJS.diversity2)
+mcmcplot( Z12.rCJS.diversityCovInd)
 
 
 Z12.rCJS.maxcov
