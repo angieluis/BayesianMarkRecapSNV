@@ -148,13 +148,13 @@ inits=function(){list(z=cjs.init.z(monthlyCH,f.longmonth), mean.phi=runif(1,0,1)
   pind=runif(1,0,1), cov.coefT=runif(dim(covariate.array)[3],0,1) )} 
 
 #parameters monitored
-parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","pind","cov.coefT","alpha.male","sigma.0",
+parameters=c("mean.phi","mean.p","mean.c","alpha.0","alpha.month","pind","cov.coefT","ind","alpha.male","sigma.0",
   "sigma.recap","sigma.male","sigma.month")
 
 
 date()
-Z12.rCJS.diversityCovInd <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_CovIndDiversity.bug",n.chains=3,n.thin=1,n.iter=10,n.burnin=5)
-date() 
+Z12.rCJS.diversityCovInd <- jags.parallel(data=bugs.data,inits,parameters,"robust_CJS_monthlylist_CovIndDiversity.bug",n.chains=3,n.thin=6,n.iter=15000,n.burnin=8000)
+date() #36 hours
 save.image("Z12rCJSdiversityCovInd.RData")
 
 
