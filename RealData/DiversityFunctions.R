@@ -127,7 +127,7 @@ library(dplyr)
 diversity.df.function <- function(
         data=UNMdata, # capture data 
         sites="Zuni", # 1 site at a time
-        webs=1, # trying for multiple webs
+        webs=1, # can be multiple webs
         sessions=session.list$web.1, # sessions trapped - may want to change to specify different sessions for different webs? (so will put in NA before or after ever trapping?)
         interpolate=FALSE, # do you want to interpolate NAs?
         scale=FALSE, # do you want to scale each one between 0 and 1 (divide by max) - this is needed for CJS models
@@ -165,12 +165,16 @@ diversity.df.function <- function(
     MNAs.w <- MNA.function(data=data, site=sites, web=webs[w], species=species[1], sessions=sessions)
     MNAs.w <- MNAs.w[,1:which(names(MNAs.w)=="Prim")]  
     
-    for(i in 1:length(species)){ 
+    for(i in 1:length(species)){ # all the species MNAs
       MNA.sp <- MNA.function(data=data, site=sites, web=webs[w], species=species[i], sessions=sessions)[,ifelse(interpolate==TRUE,7,6)]
       MNAs.w <- data.frame(MNAs.w,MNA.sp)
       names(MNAs.w)[which(names(MNAs.w)=="MNA.sp")] <- species[i]
       
     }
+    #### now also calculate MNI
+    MNI <- MNA.function(data=data[which(data$snv_pos==1),], site=sites, web=webs[w], species="pm", sessions=sessions)[,ifelse(interpolate==TRUE,7,6)]
+    MNAs.w <- data.frame(MNAs.w,MNI)
+    ####
     MNAs.w <- data.frame(site=sites, web=as.character(webs[w]), MNAs.w)
     if(w==1){
       MNAs <- MNAs.w
@@ -184,6 +188,7 @@ diversity.df.function <- function(
   # remove pm from the diversity calculations if indicated
   if(include.pm==FALSE){
     mna <- mna[,-which(names(mna)=="pm")]
+    mna <- mna[,-which(names(mna)=="MNI")]
   }
   ShannonH <- diversity(mna,index="shannon")
   SimpsonD <- diversity(mna,index="simpson")
