@@ -16,7 +16,7 @@ sessions <- sort(unique(data$Session[which(data$site==site)]))
 
 web.dates <- list()
 for(i in 1:length(webs)){
-  web.dates[[i]] <-sort(unique(data$date[which(data$site==site&UNMcaptures$web==webs[i])]))
+  web.dates[[i]] <-sort(unique(data$date[which(data$site==site&data$web==webs[i])]))
 }
 names(web.dates) <- paste("web",webs,sep=".")
 
@@ -108,15 +108,18 @@ return(Ch.list)
 #####################################################################
 
 session.list.function <- function(
-  data=UNMcaptures, #assuming this data has all the dates (including those trapped but no animals/pema were caught) and is 'cleaned'
+  data=UNMcaptures, #assuming this data has all the dates (including those trapped but no animals/pema were caught) and is 'cleaned' and has a column called 'session' or 'Session'
   site="Zuni",
   webs=c("1","2")
 ){
-
-
+  
+  site=tolower(site)
+  names(data) <- tolower(names(data))
+  data$site <- tolower(data$site)
+  sessions <- sort(unique(data$session[which(data$site==site)]))
   session.list <- list(all.sessions=sessions) 
   for(i in 1:length(webs)){
-    session.list[[i+1]] <- sort(unique(data$Session[which(data$site==site&data$web==webs[i])]))
+    session.list[[i+1]] <- sort(unique(data$session[which(data$site==site&data$web==webs[i])]))
     names(session.list)[i+1] <- paste("web",webs[i],sep=".")
   }
   
@@ -157,7 +160,7 @@ MS.capture.history.function <- function(
   
   web.dates <- list()
   for(i in 1:length(webs)){
-    web.dates[[i]] <-sort(unique(data$date[which(data$site==site&UNMcaptures$web==webs[i])]))
+    web.dates[[i]] <-sort(unique(data$date[which(data$site==site&data$web==webs[i])]))
   }
   names(web.dates) <- paste("web",webs,sep=".")
   
