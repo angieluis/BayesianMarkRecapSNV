@@ -200,10 +200,10 @@ diversity.df.function <- function(
   pero.ind <- pero.ind[which(is.finite(pero.ind))]
   peros <- apply(MNAs[,pero.ind],1,sum)
   # sum up all species density besides pm 
-  other.sp <- apply(mna,1,sum)
+  othersp <- apply(mna,1,sum)
   
   
-  MNAs.diversity <- data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,other.sp)
+  MNAs.diversity <- data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,othersp)
   
   if(scale==TRUE){
     # leave columns 1-7, the rest of the columns divide by max of column
