@@ -260,7 +260,7 @@ monthly.primaryCH.fun <- function(CH.primary,temporal.covariates){
 ####### temporal data on a weekly scale
 
 
-
+# not using
 weekly.temporaldata.fun <-function(
     dates, # dates trapped
     data=NULL, # data frame of monthlytemporal data, with either a column called date or yearmon (must include months not trapped)
@@ -372,6 +372,7 @@ weekly.temporaldata.fun <-function(
 ## Create a dataframe for individual covariates
 # this has 2 individual covariates: web and sex
 # tags must line up to Capture history rows
+# not using
 individual.covariate.fun <- function(data, #like UNMdata
                                      tags  # must line up w/ CH.secondary rows
                                      ){ 
@@ -448,6 +449,7 @@ monthly.longdataCH.fun<-function(CH.secondary,
 # occasions (months) and turn it into long data frame where each 
 # row is a week
 
+# not using:
 weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, individual.covariates, p_or_c=FALSE){ 
   #  add the primary occassion to the data
   for(i in 1:length(CH.secondary)){
@@ -505,6 +507,8 @@ weekly.longdataCH.fun<-function(CH.secondary, temporal.covariates, individual.co
 
 ######################################
 ## functions for plotting output
+
+# mcmcplot() is better
 
 hist.plot.fun <- function(BUGSout, ...){
   par(mfrow=c(1,1))
