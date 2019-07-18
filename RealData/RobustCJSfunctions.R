@@ -5,6 +5,8 @@ logit=function(x){
 revlogit=function(x){
   exp(x)/(1+exp(x))}
 
+
+
 # function to create primary CH from secondary list
 primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices 
   
@@ -19,6 +21,7 @@ primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices
 ## function to make a primary Ch but by week instead of month
 # make weeks not trapped = 0 (so not really capture history)
 # this will just be used to set initial values and known states for weekly z
+# not used:
 weekly.primaryCH.fun <- function(CH.primary,temporal.covariates){
   CH <- matrix(NA, ncol=max(temporal.covariates$week),nrow=dim(CH.primary)[1])
   old <- which(is.finite(temporal.covariates$Prim))
@@ -68,6 +71,8 @@ known.state.cjs=function(ch){
 # This applies to survival (phi) 
 # if want to apply covariates to capture probabilities, then months not trapped won't matter, only use the first one
 
+
+### not using:
 monthly.temporaldata.fun.old <-function(data,site,web=NULL){
   if(length(web)==1){
     sessions <- sort(unique(data$Session[which(data$site==site&data$web==web)]))
@@ -114,6 +119,7 @@ monthly.temporaldata.fun.old <-function(data,site,web=NULL){
 
 library(tidyverse,lubridate) 
 
+# not using:
 monthly.temporaldata.fun <-function(
   #dates, # dates trapped
   capture.data, # capture data frame like UNMdata
@@ -394,8 +400,11 @@ individual.covariate.fun <- function(data, #like UNMdata
 # function to take Robust Design capture history list of primary 
 # occasions (months) and turn it into long data frame where each 
 # row is a month (including months not trapped)
-# need to update this so that it could include NAs in the capture histories
-monthly.longdataCH.fun<-function(CH.secondary, temporal.covariate.df, individual.covariates, p_or_c=FALSE){ 
+
+monthly.longdataCH.fun<-function(CH.secondary, 
+                                 temporal.covariate.df=NULL, 
+                                 individual.covariates=NULL, 
+                                 p_or_c=FALSE){ 
   #  add the primary occassion to the data (if not already there)
   if(length(which(colnames(CH.secondary[[1]])=="Prim"))==0){
     for(i in 1:length(CH.secondary)){
@@ -615,6 +624,8 @@ monthly.covariate.function <-function(
                 # e.g, list(ndvi=0,ndvi=1,tmax=3) means use ndvi with no lag 
                 # and with a lag 1 and tmax with lag 3. 
 ){
+  
+  names(capture.data) <- tolower(names(capture.data))
   nind <- length(tags)
   #site.tag <- paste(str_to_lower(site),tags,sep=".")
   ic <- data.frame(ID=1:nind,tag=tags)
@@ -630,7 +641,7 @@ monthly.covariate.function <-function(
       ind <- which(capture.data$tag==tagi & str_to_lower(capture.data$site)==sitei)
     }
     x <- capture.data[ind,]
-    x <- x[order(x$Session),]
+    x <- x[order(x$session),]
     webi[i] <- as.character(x$web[1])
     sex[i] <- max(x$sex) # they aren't NAs but -9
   }
@@ -771,4 +782,35 @@ monthly.covariate.function <-function(
   } #c
   
   return(covariate.data)
+}
+
+
+
+######### function to put NAs into CH.secondary for individuals on webs not trapped that session
+# e.g. month 4 wasn't trapped at Zuni2 but was at Zuni2 (or at least no animals were caught)
+# use individual covariates to see which individuals/rows were on webs not trapped
+
+# not done, need to test
+CH.addNA.function <- function(
+         CH.secondary, # list of sessions
+         individual.covariates, # dataframe from monthly.covariate.function   $individual.covariates
+         webmonths # list with each element a vector of months trapped, starting from 1
+         ){
+ 
+  nwebs <- length(webmonths)
+  allmonths <- sort(unique(unlist(webmonths)))
+  
+  for(i in 1:nwebs){
+    web <- strsplit(names(webmonths)[i],".")[2]
+    not.trapped <- allmonths[which(is.na(match(allmonths,webmonths[[i]])))]
+    id.web <- individual.covariates$tag[which(individual.covariates$web==web)]
+    inds <- match(id.web,rownames(CH.secondary[[1]]))
+    for(m in 1:length(not.trapped)){
+      CH.secondary[[not.trapped[m]]][inds,] <- rep(NA,dim(CH.secondary[[not.trapped[m]]])[2])
+    }
+  }
+  
+  return(CH.secondary)
+  
+  
 }
