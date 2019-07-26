@@ -591,6 +591,40 @@ p.or.c.array.fun<- function(CH.secondary, # can be list or array
 }
 
 
+
+## this accounts for certain webs not being trapped when others were
+# could be used in place of above for not multiple sites
+multisite.p.or.c.array.fun<- function(CH.secondary, # can be list or array
+                                      temporal.covariates #dataframe from list
+                                      
+){ 
+  Ch.primary <- primary.ch.fun(CH.secondary)
+  nind <- dim(CH.secondary[[1]])[1]
+  
+  temp.data <- temporal.covariates
+  
+  nt <- dim(temp.data)[1]
+  n.sec <- unlist(lapply(CH.secondary,function(x){dim(x)[2]}))
+  p.or.c <- array(NA, dim=c(nind, nt, max(n.sec)))
+  
+  for(i in 1:nind){
+    m.trapped <- which(is.finite(Ch.primary[i,])) #sessions this indiv could have been trapped
+    longm.trapped <- temp.data$long.month[match(m.trapped,temp.data$Prim)] #what long months
+    for(m in 1:length(m.trapped)){
+      nsec <- length(which(is.finite(CH.secondary[[m.trapped[m]]][i,])))# number of secondary occasions there was trapping just for that individual(varies by web) that month 
+      for(d in 1:nsec){
+        dsum <- sum(CH.secondary[[m.trapped[m]]][i,1:(d-1)])
+        p.or.c[i,longm.trapped[m],d] <- ifelse(dsum==0,0,1)
+      } #d
+    } #m
+  } #i
+  
+  
+  return(p.or.c)
+}
+
+
+
 #############################################################
 ## all in one function to return all covariate data
 ## output is a list with elements:
