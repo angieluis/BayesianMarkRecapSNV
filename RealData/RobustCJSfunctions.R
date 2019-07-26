@@ -6,17 +6,17 @@ revlogit=function(x){
   exp(x)/(1+exp(x))}
 
 
-
 # function to create primary CH from secondary list
 primary.ch.fun <- function(CH.secondary){ # as list of monthly matrices 
-  
-  x <- lapply(CH.secondary,rowSums)
-  v1 <- unlist(x)
-  CH.primary <- matrix(replace(v1, v1>1, 1), nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary)) 
-  
+  CH.primary <- matrix(NA,nrow=dim(CH.secondary[[1]])[1], ncol=length(CH.secondary))
+  for(i in 1:dim(CH.primary)[2]){
+    CH.primary[,i] <- apply(CH.secondary[[i]],1,function(x){
+      ifelse(length(which(is.na(x)))==length(x),NA,sum(x,na.rm=TRUE))
+    })
+  }
+  CH.primary <- replace(CH.primary, CH.primary>1, 1)
   return(CH.primary)
 }
-
 
 ## function to make a primary Ch but by week instead of month
 # make weeks not trapped = 0 (so not really capture history)
