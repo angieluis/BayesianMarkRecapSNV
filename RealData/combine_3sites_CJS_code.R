@@ -1,9 +1,10 @@
 #################################################################################################
 #  Use functions in "combine_data_functions.R" to combine data for Grand Canyon, Navajo, and Zuni
+# This is all for CJS models
 #################################################################################################
 
 
-load("ThreeSiteData.RData")
+load("ThreeSiteCJSData.RData")
 ### Data generated from previous functions: covariates.data list, p.or.c arrays, etc for the 3 sites
 
 source("Code/combine_data_functions.R") # or now in "01_sw_data_functions_more.R"
