@@ -130,7 +130,7 @@ temporal.covariates$NDVI_3 <- NDVI3
 ################### Do all the data manipulation in R - create vectors
 # and line up all the information and pass to BUGS with bugs.data
 
-
+#created a function for this
 
 #  add the primary occassion to the data
 for(i in 1:length(CH.secondary)){
@@ -179,9 +179,6 @@ obs.dat <- dplyr::mutate(obs.dat, p.or.c)
 # don't add a bunch of NA's for weeks not caught
 obs.dat.full <- inner_join(obs.dat,temporal.covariates[,c("week","Prim")])
 obs.dat.full <- arrange(obs.dat.full,week,ID)
-
-
-
 
 
 #  Subset observation data to observed bits

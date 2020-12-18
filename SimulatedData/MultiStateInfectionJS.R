@@ -161,28 +161,26 @@ cat("
     
     # Priors and constraints
     for (t in 1:(n.occasions-1)){
-      phiS[t] <- mean.phi[1]
-      phiI[t] <- mean.phi[2]
-      psiSI[t] <- mean.psi
-      pS[t] <- mean.p[1]
-      pI[t] <- mean.p[2]
-      gammaS[t] ~ dunif(0, 1) #Prior for entry probabilities - why is this diff from p?
+      logit(phiS[t]) <- mean.phi[1]
+      logit(phiI[t]) <- mean.phi[2]
+      logit(psiSI[t]) <- mean.psi
+      logit(pS[t]) <- mean.p[1]
+      logit(pI[t]) <- mean.p[2]
+      gammaS[t] ~ dunif(0, 1) 
       gammaI[t] ~ dunif(0, 1) 
-      #gammaS[t] <- mean.gamma[1]
-      #gammaI[t] <- mean.gamma[2]
     }
+
     for (u in 1:2){     #for both states
-      mean.phi[u] ~ dunif(0, 1)    # Priors for mean state-spec. survival
-      mean.p[u] ~ dunif(0, 1)      # Priors for mean state-spec. recapture
-      #mean.gamma[u] ~ dunif(0, 1)      # Priors for mean state-spec. recapture
+      mean.phi[u] ~ dnorm(0, 0.4)T(-10,10)    # Priors for mean state-spec. survival
+      mean.p[u] ~ dnorm(0, 0.4)T(-10,10)      # Priors for mean state-spec. recapture
     }
-    mean.psi ~ dunif(0, 1)    # Prior for mean transition
+    mean.psi ~ dnorm(0, 0.4)T(-10,10)    # Prior for mean transition from S to I
 
     # Define state-transition and observation matrices
     for (i in 1:M){  
       # Define probabilities of State(t+1) given State(t)
       for (t in 1:(n.occasions-1)){
-      ### for proper process model, here say psiSI[t]<-beta*I[t] and define beta in priors instead of psiSI (need a logit or mlogit transform probably? Or is it fine given the priors?)
+      ### for proper process model, here say psiSI[t]<-beta*I[t] and define beta in priors instead of psiSI. Need to calculate I with robust design.
       ps[1,i,t,1] <- 1-gammaS[t]-gammaI[t]  # still not yet entered
       ps[1,i,t,2] <- gammaS[t]              # just entered as S
       ps[1,i,t,3] <- gammaI[t]              # just entered as I
@@ -228,7 +226,7 @@ cat("
         # State process: draw S(t) given S(t-1)
         z[i,t] ~ dcat(ps[z[i,t-1], i, t-1,])
         # Observation process: draw O(t) given S(t)
-        y[i,t] ~ dcat(po[z[i,t], i, t-1,]) #why t-1 here?
+        y[i,t] ~ dcat(po[z[i,t], i, t-1,]) #why t-1 here? Is this to eliminate the extra step?
       } #t
     } #i
 
@@ -374,7 +372,7 @@ SImsJS.init.z2 <- function(ch,states=4){ #states is number of states
 bugs.data <- list(y = rCH, n.occasions = dim(rCH)[2], M = dim(rCH)[1], z = known.state.SImsJS(rCH, 3))
 
 # Initial values
-inits <- function(){list(mean.phi = runif(2, 0, 1), mean.psi = runif(1, 0, 1), mean.p = runif(2, 0, 1)#, #mean.gamma = runif(2, 0, 1), 
+inits <- function(){list(mean.phi = runif(2, 0, 1), mean.psi = runif(1, 0, 1), mean.p = runif(2, 0, 1)#,  
                         # z = SImsJS.init.z2(rCH)
                         )}  
 
@@ -382,9 +380,9 @@ inits <- function(){list(mean.phi = runif(2, 0, 1), mean.psi = runif(1, 0, 1), m
 parameters <- c("mean.p", "mean.psi", "mean.phi", "Nsuper", "N", "f")
 
 # MCMC settings
-ni <- 10000
-nt <- 6
-nb <- 2000
+ni <- 100
+nt <- 3
+nb <- 50
 nc <- 3
 
 # run model 
