@@ -297,15 +297,21 @@ for(w in 1:n.webs){
 }
 
 # turn it into long diversity data
-diversity.longdata <- data.frame(site=1, web=0,long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]])
+diversity.longdata <- data.frame(site="1", web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]])
 for(w in 2:n.webs){
-  diversity.longdata <- rbind(diversity.longdata,data.frame(site=1, web=0,long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]]))
+  diversity.longdata <- rbind(diversity.longdata,data.frame(site=as.character(w), web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[w]]))
 }
 
 sim.temp <- sw.temp
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[1],"1.0")
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[2],"2.0")
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[3],"3.0")
+sim.temp$site <- as.character(sim.temp$site)
+sim.temp$site <- replace(sim.temp$site,sim.temp$site=="grandcanyon","1")
+sim.temp$site <- replace(sim.temp$site,sim.temp$site=="navajo","2")
+sim.temp$site <- replace(sim.temp$site,sim.temp$site=="zuni","3")
+sim.temp$web <-"0"
+
 
 
 
@@ -314,20 +320,24 @@ sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[3],"3.0")
 # Now format the data for each site separately
 
 for(w in 1:n.webs){
-
+  dirty.data <- longdata[[w]]
+  cleaned.data <- longdata[[w]]
+    cleaned.data$date <- cleaned.data$date.ymd
+    
   ms.CH.secondary <- multisite.MS.capture.history.fun(
-    dirty.data = longdata[[w]],
-    cleaned.data = longdata[[w]], 
+    dirty.data = dirty.data,
+    cleaned.data = cleaned.data, 
     site.webs = c("1.0"),
     species="PM"
-  )  ###<------------------ This didn't work
+  )  
 
   session.list <- multisite.session.list.fun(
-    dirty.data = longdata[[w]],
+    dirty.data = dirty.data,
     site.webs  = c("1.0")
   )
   
   # makes a primary capture history from secondary occasions
+  ms.CH.primary <- primary.MSch.fun(ms.CH.secondary)
   
   # rename secondary occasions from 1 to number of days
   # looking at column names and changing them
@@ -345,27 +355,26 @@ for(w in 1:n.webs){
 
   # apply covariate function to normalized data
   covariate.data <- multisite.monthly.covariate.fun(
-    cleaned.data = longdata[[w]], 
-    CH.secondary = ms.CH.secondary,          # as monthly list
-    # in CH.secondary row names are tags, tag names line up to CH.secondary
+    cleaned.data = cleaned.data, 
+    CH.secondary = ms.CH.secondary,         
     tags = rownames(ms.CH.secondary[[1]]),
     by.sitetag = TRUE, 
     sessions = session.list$all.sessions,
-    temporal.data = sim.temp, # need to past the right site.webs on here
+    temporal.data = sim.temp, 
     multistate=TRUE,
     diversity.data = diversity.longdata,
     remove.na=TRUE,
     site.webs = c("1.0"),
     # list of temporal covariates and their time lags
-    cov.list = list(prcp = 0, prcp3 = 0, prcp6 = 0, prcp12 = 0, 
-                  ndvi = 0, ndvi3 = 0, ndvi6 = 0, ndvi12 = 0, 
-                  temp = 0, temp3 = 0, temp6 = 0, temp12 = 0, 
-                  tmin = 0, tmin3 = 0, tmin6 = 0, tmin12 = 0, 
-                  tmax = 0, tmax3 = 0, tmax6 = 0, tmax12 = 0, 
-                  swe  = 0, swe3  = 0, swe6  = 0, swe12  = 0,
+    cov.list = list(prcp = 0, 
+                  ndvi = 0, 
+                  temp = 0,  
+                  tmin = 0,  
+                  tmax = 0, 
+                  swe  = 0,
                   swewinter = 0,
                   MNI = 0)
-  ) 
+  ) ## <------- maybe problem merging diversity data and temp data and/or making covariate matrices
 
                                         
   ## Convert to long format ----
