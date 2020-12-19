@@ -4,10 +4,7 @@
 
 #################################################################################
 ## Issues: 
-## It's not handling NAs in predictor variables, e.g., I.dat - need to interpolate.
-## Check the diversity data function and the covariate data function
-## There was a remove.na option, which will work for first value, but not missing
-## NAs in the middle.
+## 
 #################################################################################
 
 ## This contains the covariates from the  Grand Canyon Max Model  ------------------- ##

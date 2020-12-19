@@ -397,7 +397,7 @@
      not.trapped <- which(is.na(s1))
      sn <- 1:length(sessions.trapped)
      session.num <- sn[match(mc, sessions.trapped)]
-     if(length(not.trapped)>0){
+     if(length(not.trapped) > 0){
       for (i in 1:length(not.trapped)) {
        session.num[not.trapped[i]] <- session.num[max(which(sn < not.trapped[i]))]
       }
@@ -470,13 +470,13 @@
          col <- which(names(datas) == names(cov.list)[c])
          fd <- which(datas$date == data.w$date[1])
          ld <- which(datas$date == data.w$date[length(data.w$date)])
-         if (length(fd) == 1) {
-           data.w <- cbind(data.w, 
-                           datas[(fd - cov.list[[c]]):(ld - cov.list[[c]]), 
-                                 col])
-           names(data.w)[dim(data.w)[2]] <- nam
-         }
-         if (length(fd) > 1) {
+         #if (length(fd) == 1) {
+         #  data.w <- cbind(data.w, 
+         #                  datas[(fd - cov.list[[c]]):(ld - cov.list[[c]]), 
+         #                         col])
+         #  names(data.w)[dim(data.w)[2]] <- nam
+         #}
+         #if (length(fd) > 1) { ## if not >1 then prob with '.web' below. I think can do this no matter the length(fd), don't need the bit above
            for (i in 1:length(fd)) {
              data.w <- cbind(data.w, 
                              datas[(fd[i] - cov.list[[c]]):(ld[i] - cov.list[[c]]), 
@@ -487,7 +487,7 @@
                                                           sep = ""), 
                                                     sep = ".")
            }
-         }
+         #}
        }
        month.data <- dplyr::left_join(month.data, data.w)
        ind.na <- which(is.na(month.data), arr.ind = TRUE)
@@ -542,15 +542,20 @@
        web.nam <- unlist(lapply(strsplit(col.name, ".web"), function(x) {
          x[2]
        }))
-       dat <- month.data[, cols]
+       
+       dat <- month.data[, cols] # problem when only 1 column (1 site.web)
        names(dat) <- web.nam
        mat <- matrix(NA, 
                      ncol = dim(month.data)[1], 
                      nrow = dim(individual.covariates)[1])
        for (i in 1:dim(individual.covariates)[1]) {
          w <- individual.covariates$web[i]
-         mat[i, ] <- dat[, which(names(dat) == w)]
-       } # i
+         if(length(cols) > 1){ # if more than one site.web
+           mat[i, ] <- dat[, which(names(dat) == w)]
+         } else{ # if only 1 site.web
+           mat[i, ] <- dat
+         }
+        } #i
        covariate.data[[c + 2]] <- mat
        names(covariate.data)[[c + 2]] <- nam
      } # c
@@ -955,29 +960,40 @@
       }  
       w <- w+1
     }
-    # dataframe of just MNAs - removing sessions etc
-    mna <- MNAs[,(which(names(MNAs)=="Prim")+1):dim(MNAs)[2]]
-    # remove pm from the diversity calculations if indicated
-    if(include.pm==FALSE){
-      mna <- mna[,-which(names(mna)=="pm")]
-      mna <- mna[,-which(names(mna)=="MNI")]
+    # if only pm in data dimensions are off if do rest. don't need to do it
+    if(length(species) > 1){
+      # dataframe of just MNAs - removing sessions etc
+      mna <- MNAs[,(which(names(MNAs)=="Prim")+1):dim(MNAs)[2]]
+      mna <- mna[,-which(names(mna)=="MNI")] #MNI isn't a sep species
+    
+      # remove pm from the diversity calculations if indicated
+      if(include.pm==FALSE){
+        mna <- mna[,-which(names(mna)=="pm")]
+      }
+      ShannonH <- diversity(mna,index="shannon")
+      SimpsonD <- diversity(mna,index="simpson")
+      invSimpsonD <- diversity(mna,index="invsimpson")
+      # if no animals were present, you get Inf, so change to 0
+      invSimpsonD <- replace(invSimpsonD,invSimpsonD==Inf,0)
+      speciesN <- specnumber(mna)
+    
+      # sum up all peromyscus species (other than pm)
+      pero.ind <- match(c("pb","pe","pl","pn","ps","pt"),names(MNAs))
+      pero.ind <- pero.ind[which(is.finite(pero.ind))]
+      peros <- apply(MNAs[,pero.ind],1,sum)
+    
+      # sum up all species density besides pm 
+      if(include.pm==TRUE){ # if not removed before, need to remove pm
+        mna <- mna[,-which(names(mna)=="pm")]
+      }
+      othersp <- apply(mna,1,sum) 
+    
+    
+      MNAs.diversity <- data.frame(MNAs ,ShannonH, SimpsonD,
+                                   invSimpsonD, speciesN, peros, othersp)
+    } else { # if only pm in data, don't need diversity metrics
+        MNAs.diversity <- MNAs
     }
-    ShannonH <- diversity(mna,index="shannon")
-    SimpsonD <- diversity(mna,index="simpson")
-    invSimpsonD <- diversity(mna,index="invsimpson")
-    # if no animals were present, you get Inf, so change to 0
-    invSimpsonD <- replace(invSimpsonD,invSimpsonD==Inf,0)
-    speciesN <- specnumber(mna)
-    
-    # sum up all peromyscus species (other than pm)
-    pero.ind <- match(c("pb","pe","pl","pn","ps","pt"),names(MNAs))
-    pero.ind <- pero.ind[which(is.finite(pero.ind))]
-    peros <- apply(MNAs[,pero.ind],1,sum)
-    # sum up all species density besides pm 
-    othersp <- apply(mna,1,sum)
-    
-    
-    MNAs.diversity <- data.frame(MNAs ,ShannonH,SimpsonD,invSimpsonD,speciesN,peros,othersp)
     
     if(scale==TRUE){
       # leave columns 1-7, the rest of the columns divide by max of column

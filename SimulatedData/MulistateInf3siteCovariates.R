@@ -3,15 +3,17 @@
 ## to make sure all the code is working
 #######################################################################
 
+#### ***Found error in diversity data code - speciesN and othersp are 
+#       not excluding pm and MNI
+
 #### Right now, missing a few of the complications from the data
 #      1) months trapped by site doesn't differ
 #      2) all months trapped (longmonth=Prim)
 #      3) number secondary occasions always 3
 #      4) no p.or.c
 #      5) time steps line up (same seasons at same time across sites)
-#      6) Simulated data to match obs.dat so when formating data,
-#         not starting from the 'dirty data' to to Ch.list 
-#         and back to long data. 
+#      6) to get Idat, calc MNI from z, but don't scale, becaues didn't
+#         in the sims. Maybe I need to divide by what I think is the max?
 ######################################################################
 
 # Use sites grandcanyon.e, navajo.1, zuni.1 as a template
@@ -287,8 +289,50 @@ for(w in 1:n.webs){
     
 } #w
 
+# paste data from all webs together
+cleaned.data <- longdata[[1]]
+for(w in 2:length(webs)){
+  cleaned.data <- rbind(cleaned.data,longdata[[w]])
+}
+dirty.data <- cleaned.data
+cleaned.data$date <- cleaned.data$date.ymd
+cleaned.data$site_web <- paste(cleaned.data$site,cleaned.data$web,sep="_")
+cleaned.data$tag_site <- paste(cleaned.data$tag,cleaned.data$site,sep="_")
 
-#Need to use I's from z to get I.dat instead of MNI
+
+###  make diversity data (for I) -----------------------------------#
+
+
+diversity.list <- list()
+site.webs <- sort(unique(cleaned.data$site_web))
+site.webs <- sub("_",".",site.webs)
+for(i in 1:length(site.webs)){
+  site <- unlist(strsplit(site.webs[i],"[.]"))[1]
+  web <- unlist(strsplit(site.webs[i],"[.]"))[2]
+  diversity.list[[i]] <- diversity.df.function(
+    data = cleaned.data,   
+    site = site,  
+    web = web,  
+    sessions = multisite.session.list.fun(dirty.data=dirty.data,
+                                          site.webs=site.webs[i])[[1]],  
+    interpolate=TRUE, 
+    scale=FALSE, 
+    include.pm = TRUE)
+}
+names(diversity.list) <- site.webs
+
+#### Make it long data to match sw.temp.data
+
+diversity.longdata <- diversity.list[[1]]
+for(i in 2:length(diversity.list)){
+  diversity.longdata <- rbind(diversity.longdata,diversity.list[[i]])
+}
+
+
+
+
+## or alterneatively---------------------------------------
+#  use I's from z to get I.dat instead of MNI
 Isum <- list()
 Nsum <- list()
 for(w in 1:n.webs){
@@ -297,20 +341,27 @@ for(w in 1:n.webs){
 }
 
 # turn it into long diversity data
-diversity.longdata <- data.frame(site="1", web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]])
+diversity.longdata2 <- data.frame(site="1", web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]])
 for(w in 2:n.webs){
-  diversity.longdata <- rbind(diversity.longdata,data.frame(site=as.character(w), web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[w]]))
+  diversity.longdata2 <- rbind(diversity.longdata2,data.frame(site=as.character(w), web="0",long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[w]]))
 }
+
+#MNI and I from z are very close....
+plot(Isum[[1]],diversity.list[[1]]$MNI)
+abline(0,1)
+plot(Isum[[2]],diversity.list[[2]]$MNI)
+abline(0,1)
+plot(Isum[[3]],diversity.list[[3]]$MNI)
+abline(0,1)
+
+## -----------------------------------------------------
 
 sim.temp <- sw.temp
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[1],"1.0")
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[2],"2.0")
 sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[3],"3.0")
-sim.temp$site <- as.character(sim.temp$site)
-sim.temp$site <- replace(sim.temp$site,sim.temp$site=="grandcanyon","1")
-sim.temp$site <- replace(sim.temp$site,sim.temp$site=="navajo","2")
-sim.temp$site <- replace(sim.temp$site,sim.temp$site=="zuni","3")
-sim.temp$web <-"0"
+sim.temp$site <- unlist(lapply(strsplit(sim.temp$site.web,"[.]"),function(x){x[1]}))
+sim.temp$web <-unlist(lapply(strsplit(sim.temp$site.web,"[.]"),function(x){x[2]}))
 
 
 
@@ -320,10 +371,7 @@ sim.temp$web <-"0"
 # Now format the data for each site separately
 
 for(w in 1:n.webs){
-  dirty.data <- longdata[[w]]
-  cleaned.data <- longdata[[w]]
-    cleaned.data$date <- cleaned.data$date.ymd
-    
+  
   ms.CH.secondary <- multisite.MS.capture.history.fun(
     dirty.data = dirty.data,
     cleaned.data = cleaned.data, 
@@ -374,7 +422,7 @@ for(w in 1:n.webs){
                   swe  = 0,
                   swewinter = 0,
                   MNI = 0)
-  ) ## <------- maybe problem merging diversity data and temp data and/or making covariate matrices
+  ) 
 
                                         
   ## Convert to long format ----
@@ -454,7 +502,7 @@ obs.dat <- obs.dat %>%
   dplyr::filter(!is.na(State))
 
 ## replace State 0 (not observed) to 3 for multistate infection model
-obs.dat$State <- replace(obs.dat$State,obs.dat$State==0,3)
+obs.dat$State <- replace(obs.dat$State, obs.dat$State == 0, 3)
 
 covariate.data <- combine.covariates.fun(covariate.data = list(covariate.data_sim1,covariate.data_sim2,covariate.data_sim3))
 
@@ -466,7 +514,9 @@ months.trapped.mat <- combine.months.trapped.func(months.trapped.mat = list(mont
 
 length.months.trapped <- c(length.months.trapped_sim1,length.months.trapped_sim2,length.months.trapped_sim3)
 
+# modeled so no c
+p.or.c <- array(0, dim=c(dim(months.trapped.mat), 3))
 
-save(obs.dat, covariate.data, monthlyCH, p.or.c, n.sec.occ, months.trapped.mat, length.months.trapped,file="CombinedSimMSData.RData")
+save(obs.dat, covariate.data, monthlyCH, n.sec.occ, p.or.c, months.trapped.mat, length.months.trapped,file="SimulatedData/CombinedSimMSData.RData")
 
 

@@ -1,9 +1,9 @@
 
 # Create a list of MNA, MNI, and diversity indices for all sites/webs------------------------##
 
-load("AllCaptureData.RData")
+load("RealData/Data/AllCaptureData.RData")
 
-source("01_sw_data_functions_more.R")
+source("RealData/Code/01_sw_data_functions_more.R")
 
 
 
@@ -24,7 +24,7 @@ for(i in 1:length(site.webs)){
     include.pm = TRUE)
 }
 names(MNAs.diversity.list) <- site.webs
-save(MNAs.diversity.list,file="DiversityDataList.RData")
+save(MNAs.diversity.list,file="RealData/Data/DiversityDataList.RData")
 
 #### Make it long data to match sw.temp.data
 
@@ -40,7 +40,7 @@ for(i in 8:dim(MNAs.diversity.longdata)[2]){
   names(scaled.MNAs.diversity.longdata)[i] <- names(MNAs.diversity.longdata)[i]
 }
 
-save(MNAs.diversity.longdata, scaled.MNAs.diversity.longdata, file="DiversityLongdata.RData")
+save(MNAs.diversity.longdata, scaled.MNAs.diversity.longdata, file="RealData/Data/DiversityLongdata.RData")
 
 ###########################################################################################
 ## Same, but now interpolate. (Models can't have NAs)
@@ -65,7 +65,7 @@ for(i in 1:length(site.webs)){
     include.pm = TRUE)
 }
 names(MNAs.diversity.list.interp) <- site.webs
-save(MNAs.diversity.list.interp,file="DiversityDataListInterpolated.RData")
+save(MNAs.diversity.list.interp,file="RealData/Data/DiversityDataListInterpolated.RData")
 
 #### Make it long data to match sw.temp.data
 
@@ -81,4 +81,4 @@ for(i in 8:dim(MNAs.diversity.interp.longdata)[2]){
   names(scaled.MNAs.diversity.interp.longdata)[i] <- names(MNAs.diversity.interp.longdata)[i]
 }
 
-save(MNAs.diversity.interp.longdata, scaled.MNAs.diversity.interp.longdata, file="DiversityLongdataInterpolated.RData")
+save(MNAs.diversity.interp.longdata, scaled.MNAs.diversity.interp.longdata, file="RealData/Data/DiversityLongdataInterpolated.RData")
