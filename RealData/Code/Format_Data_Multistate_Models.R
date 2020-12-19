@@ -14,18 +14,16 @@ all.site.webs <- c("grandcanyon.e", "grandcanyon.m", "grandcanyon.t",
                    "walnutcreek.a", "walnutcreek.w", 
                    "zuni.1",  "zuni.2")    
 
-setwd("~/Documents/JAGS/BayesianMarkRecapSNV/RealData")
+load("RealData/Data/AllCaptureData.RData")
 
-load("AllCaptureData.RData")
-
-source("01_sw_data_functions_more.R")
+source("RealData/Code/01_sw_data_functions_more.R")
 
 # read in normalized covariates
-sw.temp.data <- read.csv("updated_southwest_covariates_norm.csv")
+sw.temp.data <- read.csv("RealData/Data/updated_southwest_covariates_norm.csv")
 
 # load diversity/density data
 # See "DiversityListCode.R"
-load("DiversityLongdataInterpolated.RData")
+load("RealData/Data/DiversityLongdataInterpolated.RData")
 
 
 
@@ -859,6 +857,6 @@ months.trapped.mat <- combine.months.trapped.func(months.trapped.mat = list(mont
 length.months.trapped <- c(length.months.trapped_GC,length.months.trapped_L,length.months.trapped_N,length.months.trapped_P,length.months.trapped_WC,length.months.trapped_Z)
 
 
-save(obs.dat, covariate.data, monthlyCH, p.or.c, n.sec.occ, months.trapped.mat, length.months.trapped,file="CombinedAllSitesMSData.RData")
+save(obs.dat, covariate.data, monthlyCH, p.or.c, n.sec.occ, months.trapped.mat, length.months.trapped,file="RealData/Data/CombinedAllSitesMSData.RData")
 
   
