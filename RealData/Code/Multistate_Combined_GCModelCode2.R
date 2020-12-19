@@ -3,8 +3,13 @@
 
 ## To do: ----------------------------------------------------------##
 # 1:    I'm assuming can't go from infected to uninfected. Check data.
-# 2:    Think about how to model beta. Think about transform
-#         - maybe logit is ok, because standardizing I.dat to max 1,
+# 2:    Think about how to model beta. 
+#         - I don't think immig is immigration but the density-
+#           independent part of transmission. Immigration can 
+#           automatically be included by animals coming in with state 2.
+#           I think I should remove this and/or estimate q
+#         - Think about transform. Maybe logit is ok, 
+#           because standardizing I.dat to max 1,
 #           which will make beta larger
 #         - should vary by site or web
 #         - need infected immigration

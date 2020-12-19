@@ -3,7 +3,7 @@
 
 ############################################################
 ## Problems:
-## 1) covariate.data$individual.covariates$web is all 1.0 
+##  
 ############################################################
 
 
@@ -154,9 +154,5 @@ Combined3sites.MSinf.GCModel <- jags(data     = bugs.data,
                                      n.iter   = 2, 
                                      n.burnin = 1)
 
-#Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  : 
-#Error in node z[262,21]
-#Node inconsistent with parents
-# initial values are putting in 1 after this, but should be 2 because was first caught as 2
 
 
