@@ -373,13 +373,13 @@ for(w in 1:n.webs){
   ms.CH.secondary <- multisite.MS.capture.history.fun(
     dirty.data = dirty.data,
     cleaned.data = cleaned.data, 
-    site.webs = c("1.0"),
+    site.webs = paste(w,".0",sep=""),
     species="PM"
   )  
 
   session.list <- multisite.session.list.fun(
     dirty.data = dirty.data,
-    site.webs  = c("1.0")
+    site.webs  = paste(w,".0",sep="")
   )
   
   # makes a primary capture history from secondary occasions
@@ -410,7 +410,7 @@ for(w in 1:n.webs){
     multistate=TRUE,
     diversity.data = diversity.longdata,
     remove.na=TRUE,
-    site.webs = c("1.0"),
+    site.webs = paste(w,".0",sep=""),
     # list of temporal covariates and their time lags
     cov.list = list(prcp = 0, 
                   ndvi = 0, 
