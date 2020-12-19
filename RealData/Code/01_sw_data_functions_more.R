@@ -1226,14 +1226,19 @@
   MSinf.init.z <- function(ch=CH.primary.ms){
     kn.state <- known.state.SImsInf(ms = ch)
     f <- apply(ch,1,function(x){min(which(x > 0))})
-    
-    state <- matrix(1, nrow = dim(ch)[1], ncol = dim(ch)[2]) # default is S (1)
+    state <- matrix(NA, nrow = dim(ch)[1], ncol = dim(ch)[2]) 
+    # fill in with first state caught
+    for(i in 1:dim(ch)[1]){
+      f.state <- ch[i,f[i]]
+      state[i,] <- rep(f.state,dim(ch)[2]) 
+    }
+    # remove those that are in the known state
     state <- replace(state,!is.na(kn.state),NA)
     
     for(i in 1:(dim(state)[1])){
-      state[i,1:f[i]] <- NA
+      state[i,1:f[i]] <- NA # put NA for when first caught (in likelihood)
       
-      if(length(which(kn.state[i,] == 2)) > 0){
+      if(length(which(kn.state[i,] == 2)) > 0){ 
         maxI <- max(which(kn.state[i,] == 2))
         if(maxI < dim(state)[2] ){
           state[i, (maxI + 1):dim(state)[2]] <- 2 # all after caught as I are I (2)

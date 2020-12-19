@@ -1,4 +1,10 @@
+### Running a multistate infection model on simulated data
 
+
+############################################################
+## Problems:
+## 1) covariate.data$individual.covariates$web is all 1.0 
+############################################################
 
 
 # packages
@@ -143,12 +149,14 @@ Combined3sites.MSinf.GCModel <- jags(data     = bugs.data,
                                      inits, 
                                      parameters, 
                                      "Multistate_Combinedsites_GCModel.bug", 
-                                     n.chains = 3, 
+                                     n.chains = 1, 
                                      n.thin   = 1, 
-                                     n.iter   = 20, 
-                                     n.burnin = 5)
+                                     n.iter   = 2, 
+                                     n.burnin = 1)
 
-
-
+#Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  : 
+#Error in node z[262,21]
+#Node inconsistent with parents
+# initial values are putting in 1 after this, but should be 2 because was first caught as 2
 
 
