@@ -3,14 +3,12 @@
 ## to make sure all the code is working
 #######################################################################
 
-#### ***Found error in diversity data code - speciesN and othersp are 
-#       not excluding pm and MNI
 
 #### Right now, missing a few of the complications from the data
 #      1) months trapped by site doesn't differ
 #      2) all months trapped (longmonth=Prim)
 #      3) number secondary occasions always 3
-#      4) no p.or.c
+#      4) no p.or.c (assume p.or.c==0 for all [i,m,d])
 #      5) time steps line up (same seasons at same time across sites)
 #      6) to get Idat, calc MNI from z, but don't scale, becaues didn't
 #         in the sims. Maybe I need to divide by what I think is the max?
@@ -37,9 +35,9 @@ sw.temp$season <- ifelse(sw.temp$month == 12 |
 
 webs <- c("grandcanyon.e","navajo.1","zuni.1")
 
-ninds <- c(400,200,200)
+ninds <- c(300,200,200)
 ntot <- sum(ninds)
-n.months <- 50   
+n.months <- 40   
 start.date <- sw.temp$date2[20] # Aug 1994
 end.date <- start.date + months(n.months-1)
 n.webs <- length(ninds)
