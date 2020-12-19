@@ -35,13 +35,18 @@ sw.temp$season <- ifelse(sw.temp$month == 12 |
 
 webs <- c("grandcanyon.e","navajo.1","zuni.1")
 
-ninds <- c(800,400,400)
+ninds <- c(400,200,200)
 ntot <- sum(ninds)
 n.months <- 50   
 start.date <- sw.temp$date2[20] # Aug 1994
 end.date <- start.date + months(n.months-1)
 n.webs <- length(ninds)
 n.sec.occ <- 3
+prim.dates <- seq(start.date,end.date,by="month")
+sessions <- character()
+for(i in 1:length(prim.dates)){
+  sessions[i] <- ifelse(month(prim.dates[i])<10 ,paste(year(prim.dates[i]),"0",month(prim.dates[i]),sep=""),paste(year(prim.dates[i]),month(prim.dates[i]),sep=""))
+}
 
 
 ### set parameter values
@@ -68,10 +73,10 @@ sigma.season       = c(0.2,0.2,0.1)
 sigma.web          = c(0,0,0)
 sigma.inf          = 0.1
 sigma.inf.male     = 0.1
-beta.0             = 0.001
-beta.male          = 0.005
-beta.site          = c(0.01,0.02) 
-immig              = 0.01
+beta.0             = 0.00000005
+beta.male          = 0.00000005
+beta.site          = c(0.00000001,0.00000002) 
+immig              = -2
 
 alpha.season.use       = c(0,alpha.season)
 alpha.ndvi.season.use  = c(0,alpha.ndvi.season)
@@ -218,8 +223,9 @@ for(w in 1:n.webs){
 
 # each site separately
 obs <- list()
+longdata <- list()
 for(w in 1:n.webs){
-  obs[[w]]<- data.frame(ID=NA, month=NA, Sec=NA, State=NA)
+  obs[[w]]<- data.frame(ID=NA, month=NA, Sec=NA, State=NA, sex=NA)
   
   pS <- matrix(NA,ninds[w],n.months)
   pI <- matrix(NA,ninds[w],n.months)
@@ -257,36 +263,201 @@ for(w in 1:n.webs){
         obs.state <- replace(obs.state,obs.state==0, 3) # 3 for not caught 
         
         obs[[w]] <- rbind(obs[[w]], data.frame(ID = rep(i, n.sec.occ), 
-                                               month = rep(m, n.sec.occ), 
-                                               Sec = 1:n.sec.occ,
-                                               State = obs.state))  
+                                    month = rep(m, n.sec.occ), 
+                                    Sec = 1:n.sec.occ,
+                                    State = obs.state,
+                                    sex = rep(indiv.data[[w]]$sex[i] ,n.sec.occ)))  
         
    } #m
  } #i
+  
   obs[[w]] <- obs[[w]][-1,] # remove the first row of NAs
+  longdata[[w]] <- obs[[w]][-which(obs[[w]]$State==3),]
+  
+  longdata[[w]]$letter_2 <- "pm"
+  longdata[[w]]$site <- w
+  longdata[[w]]$web <- 0
+  longdata[[w]]$tag <- longdata[[w]]$ID
+  longdata[[w]]$snv_pos <- longdata[[w]]$State-1
+  longdata[[w]]$date.ymd <- prim.dates[longdata[[w]]$month]
+  longdata[[w]]$date.ymd <- longdata[[w]]$date.ymd + days(longdata[[w]]$Sec-1)
+  longdata[[w]]$date <- paste(month(longdata[[w]]$date.ymd),day(longdata[[w]]$date.ymd), year(longdata[[w]]$date.ymd), sep="/")
+  longdata[[w]]$session <- sessions[longdata[[w]]$month]
+
+    
 } #w
 
 
-# make like SW data
-# remove all state = 3
-# add indiv covariates like sex, site, web, letter_2, date, session, snv_pos
-# dates need to be "1994-08-01", "1994-08-02", "1994-08-03"
+#Need to use I's from z to get I.dat instead of MNI
+Isum <- list()
+Nsum <- list()
+for(w in 1:n.webs){
+  Isum[[w]] <- apply(z[[w]],2,function(x){length(which(x==2))})
+  Nsum[[w]] <- apply(z[[w]],2,function(x){length(which(x>0))})
+}
+
+# turn it into long diversity data
+diversity.longdata <- data.frame(site=1, web=0,long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]])
+for(w in 2:n.webs){
+  diversity.longdata <- rbind(diversity.longdata,data.frame(site=1, web=0,long.month=1:n.months,session=sessions, year=year(prim.dates),month=month(prim.dates),Prim=1:n.months,MNI=Isum[[1]]))
+}
+
+sim.temp <- sw.temp
+sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[1],"1.0")
+sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[2],"2.0")
+sim.temp$site.web <- replace(sim.temp$site.web,sim.temp$site.web==webs[3],"3.0")
+
+
 
 
 ####-------------------------------------------------------------------------------###
 # Now format the data for each site separately
 
+for(w in 1:n.webs){
 
-covariate.data_1 <- # need  cleaned.data, CH.secondary (as list), tags, by.sitetag=TRUE,
-  # diversity.data for I.dat  (need MNI though it's not what I used? I guess I'll just use zI)
+  ms.CH.secondary <- multisite.MS.capture.history.fun(
+    dirty.data = longdata[[w]],
+    cleaned.data = longdata[[w]], 
+    site.webs = c("1.0"),
+    species="PM"
+  )  ###<------------------ This didn't work
+
+  session.list <- multisite.session.list.fun(
+    dirty.data = longdata[[w]],
+    site.webs  = c("1.0")
+  )
+  
+  # makes a primary capture history from secondary occasions
+  
+  # rename secondary occasions from 1 to number of days
+  # looking at column names and changing them
+  for (m in 1:length(ms.CH.secondary)) {
+   colnames(ms.CH.secondary[[m]]) <- 1:dim(ms.CH.secondary[[m]])[2]
+  } 
+
+
+  # number of secondary occasions - maximum of secondary occasions across webs
+  n.sec.occ <- unlist(lapply(ms.CH.secondary, function(x) {
+    dim(x)[2]
+  }))
 
 
 
+  # apply covariate function to normalized data
+  covariate.data <- multisite.monthly.covariate.fun(
+    cleaned.data = longdata[[w]], 
+    CH.secondary = ms.CH.secondary,          # as monthly list
+    # in CH.secondary row names are tags, tag names line up to CH.secondary
+    tags = rownames(ms.CH.secondary[[1]]),
+    by.sitetag = TRUE, 
+    sessions = session.list$all.sessions,
+    temporal.data = sim.temp, # need to past the right site.webs on here
+    multistate=TRUE,
+    diversity.data = diversity.longdata,
+    remove.na=TRUE,
+    site.webs = c("1.0"),
+    # list of temporal covariates and their time lags
+    cov.list = list(prcp = 0, prcp3 = 0, prcp6 = 0, prcp12 = 0, 
+                  ndvi = 0, ndvi3 = 0, ndvi6 = 0, ndvi12 = 0, 
+                  temp = 0, temp3 = 0, temp6 = 0, temp12 = 0, 
+                  tmin = 0, tmin3 = 0, tmin6 = 0, tmin12 = 0, 
+                  tmax = 0, tmax3 = 0, tmax6 = 0, tmax12 = 0, 
+                  swe  = 0, swe3  = 0, swe6  = 0, swe12  = 0,
+                  swewinter = 0,
+                  MNI = 0)
+  ) 
 
+                                        
+  ## Convert to long format ----
+
+  obs.dat <- monthly.longdata.CH.fun(ms.CH.secondary, 
+                                      covariate.data$temporal.covariates, 
+                                      covariate.data$individual.covariates)
+
+
+  monthlyCH <- monthly.primary.CH.fun(ms.CH.primary,
+                                       covariate.data$temporal.covariates)
+
+
+  webmonths <- list()
+  # loop through sessions   
+  for (i in 1:(length(session.list) - 1)) {
+   x <- match(session.list[[i + 1]], 
+               covariate.data$temporal.covariates$session)
+    webmonths[[i]] <- x[which(is.finite(x))]
+  }
+  names(webmonths) <- names(session.list)[-1]
+
+
+  # matrix for months trapped
+  months.trapped.mat <- matrix(NA, 
+                                nrow = dim(ms.CH.secondary[[1]])[1], 
+                                ncol = max(unlist(lapply(webmonths, length))))
+
+
+  # create numeric
+  length.months.trapped <- numeric()
+  # loop through months trapped
+  for (i in 1:dim(months.trapped.mat)[1]) {
+   # this is a factor currently
+    webnam <- covariate.data$individual.covariates$web[i] 
+    webi   <- which(names(webmonths) == paste("web", webnam, sep = "."))
+    length.months.trapped[i] <- length(webmonths[[webi]])
+    months.trapped.mat[i, 1:length.months.trapped[i]] <- webmonths[[webi]]
+  }
+
+  # take care of problem of differing number of secondary occasions
+  n.sec.occ <- matrix(NA,
+                       nrow = dim(ms.CH.primary)[1],
+                       ncol = dim(ms.CH.primary)[2])
+
+  for(t in 1:dim(n.sec.occ)[2]) {
+    n.sec.occ[,t] <- apply(ms.CH.secondary[[t]],
+                            1,
+                            function(x){length(which(is.finite(x)))})
+  }
+
+
+
+  assign(paste("ms.CH.secondary_sim", w, sep=""),ms.CH.secondary)
+  assign(paste("session.list_sim",w,sep=""),session.list)
+  assign(paste("ms.CH.primary_sim",w,sep=""),primary.MSch.fun(ms.CH.secondary))
+  assign(paste("n.sec.occ_sim",w,sep=""),n.sec.occ)
+  assign(paste("covariate.data_sim",w,sep=""),covariate.data)
+  assign(paste("obs.dat_sim",w,sep=""),obs.dat)
+  assign(paste("monthlyCH_sim",w,sep=""),monthlyCH)
+  assign(paste("webmonths_sim",w,sep=""),webmonths)
+  assign(paste("months.trapped.mat_sim",w,sep=""),months.trapped.mat)
+  assign(paste("length.months.trapped_sim",w,sep=""),length.months.trapped)
+  assign(paste("n.sec.occ_sim",w,sep=""),n.sec.occ)
+
+}
 
 
 
 ####-------------------------------------------------------------------------------###
 # Now combine the data using the combine data functions
+
+obs.dat <- combine.obsdat.fun(obs.dats = list(obs.dat_sim1,obs.dat_sim2,obs.dat_sim3), individual.covariates = list(covariate.data_sim1$individual.covariates,covariate.data_sim2$individual.covariates,covariate.data_sim3$individual.covariates))
+
+## remove NA rows of obs.dat (when not trapped that day)
+obs.dat <- obs.dat %>%
+  dplyr::filter(!is.na(State))
+
+## replace State 0 (not observed) to 3 for multistate infection model
+obs.dat$State <- replace(obs.dat$State,obs.dat$State==0,3)
+
+covariate.data <- combine.covariates.fun(covariate.data = list(covariate.data_sim1,covariate.data_sim2,covariate.data_sim3))
+
+monthlyCH <- combine.monthlyCH.fun(monthlyCH = list(monthlyCH_sim1,monthlyCH_sim2,monthlyCH_sim3))
+
+n.sec.occ <- combine.n.sec.occ.func(n.sec.occ = list(n.sec.occ_sim1,n.sec.occ_sim2,n.sec.occ_sim3))
+
+months.trapped.mat <- combine.months.trapped.func(months.trapped.mat = list(months.trapped.mat_sim1,months.trapped.mat_sim2, months.trapped.mat_sim3))
+
+length.months.trapped <- c(length.months.trapped_sim1,length.months.trapped_sim2,length.months.trapped_sim3)
+
+
+save(obs.dat, covariate.data, monthlyCH, p.or.c, n.sec.occ, months.trapped.mat, length.months.trapped,file="CombinedSimMSData.RData")
 
 

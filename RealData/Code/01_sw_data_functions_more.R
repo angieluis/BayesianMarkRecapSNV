@@ -397,9 +397,11 @@
      not.trapped <- which(is.na(s1))
      sn <- 1:length(sessions.trapped)
      session.num <- sn[match(mc, sessions.trapped)]
-     for (i in 1:length(not.trapped)) {
+     if(length(not.trapped)>0){
+      for (i in 1:length(not.trapped)) {
        session.num[not.trapped[i]] <- session.num[max(which(sn < not.trapped[i]))]
-     }
+      }
+     }   
      Prim <- session.num
      Prim[which(is.na(s1))] <- NA
      month.data <- data.frame(long.month = 1:length(ms), 
