@@ -1223,7 +1223,8 @@
   # 3 dead
   # this just puts in an initial value of alive as last state seen
   ##################################################################
-  MSinf.init.z <- function(ch=CH.primary.ms){
+  MSinf.init.z <- function(ch=CH.primary.ms,
+                           n.months){ # n.months is the length of months in the dataset by individual because can differ by web [i,m] . I think assumes that all sites start at the same time?
     kn.state <- known.state.SImsInf(ms = ch)
     f <- apply(ch,1,function(x){min(which(x > 0))})
     state <- matrix(NA, nrow = dim(ch)[1], ncol = dim(ch)[2]) 
@@ -1243,6 +1244,9 @@
         if(maxI < dim(state)[2] ){
           state[i, (maxI + 1):dim(state)[2]] <- 2 # all after caught as I are I (2)
         }
+      }
+      if(n.months[i]!=max(n.months)){
+        state[i,(n.months[i]+1):dim(ch)[2]] <- NA # replace all after last month in the dataset with NA
       }
     }
     return(state)
