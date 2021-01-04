@@ -24,8 +24,8 @@
    load("CombinedAllSitesMSData.RData")
 
  # source functions and model
-   source("01_sw_data_functions_more.R")
-   source("Multistate_Combined_GCModelCode2.R")
+   source("Code/01_sw_data_functions_more.R")
+   source("Code/Multistate_Combined_GCModelCode2.R")
 
    
 
@@ -75,7 +75,7 @@
  # supply initial values
    inits <- function() {
       list(
-         z                  = MSinf.init.z(monthlyCH), 
+         z                  = MSinf.init.z(monthlyCH,n.months), 
          alpha.0            = runif(1, 0, 1), 
          alpha.season       = runif(3, 0, 1), 
          alpha.web          = runif(max(web) - 1, 0, 1),
@@ -101,8 +101,7 @@
          sigma.inf.male     = runif(1, 0, 1),
          beta.0             = runif(1, 0, 1),
          beta.male          = runif(1, 0, 1),
-         beta.site          = runif(max(site) - 1, 0, 1),
-         immig              = runif(1, 0, 1)
+         beta.site          = runif(max(site) - 1, 0, 1)
          
       )
       }
@@ -140,8 +139,7 @@
                    "sigma.inf.male",
                    "beta.0",
                    "beta.male",
-                   "beta.site",
-                   "immig"
+                   "beta.site"
                    
                     )
 
@@ -172,10 +170,13 @@
 
    ## took a week and then:
    # Error in checkForRemoteErrors(lapply(cl, recvResult)) : 
-   #3 nodes produced errors; first error: RUNTIME ERROR:
-   #   Attempt to set value of undefined node z[1,51]
-     ## 51 is after GrandCanyon stops, so maybe need to not specify inits for after?
+   #3 nodes produced errors; first error: Error in node z[3446,76]
+   #Cannot overwrite value of observed node
 
+   # The capture histories have 2 0 1 1 2 1 
+   # not sure if the problem is because it goes from 2 to 1 and I assume that can't happen, or if there is another 
+   # problem. Because the one it says it is observed at 76, which is correct, so why is it trying to estimate that?
+   # There is an inital value for the places where it assumes are known states, which there shouldn't be. 
    
 ## -------------------------------------------------------------------------- ##
    
