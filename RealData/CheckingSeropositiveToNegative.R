@@ -1,5 +1,12 @@
-#### Checking how many individuals go from seropositive to seronegative.
-## right now the code doesn't work for this. I assume it can't happen.
+####################################################################################
+#### In the model code, I assume that an individual can't go from seropositive
+#### to seronegative. Here, I found that 22 individuals do at these sites.
+#### Checking each individual to see why and make judgement call on changing
+#### their SNV status.
+
+##### To do: I think right now, all NAs for SNV_pos are turned to negative. Fix  
+##### clean data code so that NAs are positive if the tests before are positive.
+####################################################################################
 
 
 
@@ -31,6 +38,19 @@ site.tags.tocheck<-covariate.data$individual.covariates$tag[which(goes.backwards
 
 site.tag <- paste(tolower(southwest.dirty$site),tolower(southwest.dirty$tag),sep=".")
 
+
+##############################################################################
+# if don't change in the original 'clean data file', then need to change:
+#   monthlyCH
+#   obs.dat$State ## which is hard to line up right since different individuals have different Prim, Sec numbering
+#   f.state # if it's the first capture that we're changing
+
+
+
+
+
+############################################# Look at each one
+
 ##########################  1
 i=1
 monthlyCH[tocheck[i],] # caught twice - first 00021000
@@ -40,6 +60,9 @@ southwest.dirty[which(site.tag==site.tags.tocheck[i]),]
 # must have 'cleaned' to make negative because assumed maternal antibodies when was recorded as juv
 
 ##--> should be an adult and positive.
+#monthlyCH[tocheck[i],which(monthlyCH[tocheck[i],]==1)] <- 2
+#obs.dat$State[which(obs.dat$ID==tocheck[i] & obs.dat$State==1)] <- 2
+
 
 ######################### 2
 i=2
@@ -49,6 +72,8 @@ southwest.dirty[which(site.tag==site.tags.tocheck[i]),]
 # only positive on first capture and weight was recorded as at least 18.5 (though the weights fluctuating a lot within and between sessions)
 
 ##--> should probably just make negative a first capture
+
+# then need to also change covariate.data$individual.covariates$f.state
 
 ######################### 3
 i=3
@@ -236,9 +261,11 @@ monthlyCH[tocheck[i],] # 0  2  1  1  1  0  1  1  0
 
 southwest.dirty[which(site.tag==site.tags.tocheck[i]),]
 
-# was adult, but most be false positive
+# was adult at first capture, but must be false positive
 
 ##--> change 2 to 1
+
+
 
 
 
