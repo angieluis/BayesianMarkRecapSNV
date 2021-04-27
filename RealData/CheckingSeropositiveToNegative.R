@@ -5,7 +5,7 @@
 #### their SNV status.
 
 ##### To do: I think right now, all NAs for SNV_pos are turned to negative. Fix  
-##### clean data code so that NAs are positive if the tests before are positive.
+##### MSch code so that NAs are positive if the tests before are positive.
 ####################################################################################
 
 
