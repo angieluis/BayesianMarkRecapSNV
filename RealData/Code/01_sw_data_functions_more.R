@@ -1027,8 +1027,9 @@
     # including those trapped but no animals/pema were caught
     dirty.data = southwest.dirty,
     cleaned.data = southwest.final.clean, # 'cleaned'
-    site.webs = c("Zuni.1", "Zuni.2"),
+    site.webs = c("grandcanyon.e","grandcanyon.m","grandcanyon.t"),
     species="PM",
+    SNV.afterpos =FALSE, # change the few negatives that come after a positive to a positive. return which ones changed
     SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
   ){
     
@@ -1152,14 +1153,29 @@
             if(dim(id.day.dat)[1] == 0){ # if animal wasn't caught that day
               Ch.list[[session]][indiv, d] <- 0        # put in a 0
             } else{                 # if was caught, check serostatus for all days in that primary period, and put in that status
-              status <- id.session.dat$snv_pos
-              Ch.list[[session]][indiv, d] <- ifelse(length(which(status==1))>0,2,ifelse(length(which(status==0))>0,1,ifelse(SNV.unknown.state==TRUE,3,1)))
-            }
+              status <- id.session.dat$snv_adj
+              
+              Ch.list[[session]][indiv, d] <- ifelse(length(which(status==1))>0,2,ifelse(length(which(status==0))>0,1,ifelse(SNV.unknown.state==TRUE,3,1))) # if any of the days are recorded as positive, make is positive ("2"), if any of the days are recorded as negative, make negative ("1"), otherwise make unknown SNV it's own state ("3") (or default to negative if SNV.unknown.state==FALSE)                                                               
+              
+              
+              if(SNV.afterpos==TRUE){ # change the negatives that come after a positive to a positive, and return message
+                chobs <- unique(Ch.list[[session]][indiv,d])
+                if(chobs==1){  # if negative
+                  if(any(unlist(lapply(Ch.list, function(x){any(x[indiv,]==2)}))==1,na.rm=TRUE)){ #if positive any previous month
+                    # if so, change to positive
+                    Ch.list[[session]][indiv,d] <- 2
+                    cat("changed ID",indiv,"session",session,"from SNV negative after positive to positive","\n")  
+                  }   
+                }
+              } #if afterpos==TRUE 
+              
+            } # if caught
           } #i
         } #d
         cat("web = ", w, "; session = ", m, "\n")
       } #m
     } #w
+    
     return(Ch.list)
   }
   
