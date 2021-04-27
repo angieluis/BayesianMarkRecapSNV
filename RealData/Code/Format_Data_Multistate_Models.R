@@ -37,7 +37,8 @@ ms.CH.secondary_GC <- multisite.MS.capture.history.fun(
   dirty.data = southwest.dirty,
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("grandcanyon.e","grandcanyon.m","grandcanyon.t"),
-  species="PM",
+  species="PM", 
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
@@ -172,6 +173,7 @@ ms.CH.secondary_L <- multisite.MS.capture.history.fun(
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("limestone.c1", "limestone.s1", "limestone.s2"),
   species="PM",
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
@@ -305,6 +307,7 @@ ms.CH.secondary_N <- multisite.MS.capture.history.fun(
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("navajo.1",   "navajo.2"),
   species="PM",
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
@@ -438,6 +441,7 @@ ms.CH.secondary_P <- multisite.MS.capture.history.fun(
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("placitas.1", "placitas.2",  "placitas.3"),
   species="PM",
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
@@ -571,6 +575,7 @@ ms.CH.secondary_WC <- multisite.MS.capture.history.fun(
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("walnutcreek.a", "walnutcreek.w"),
   species="PM",
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
@@ -704,6 +709,7 @@ ms.CH.secondary_Z <- multisite.MS.capture.history.fun(
   cleaned.data = southwest.final.clean, # 'cleaned'
   site.webs = c("zuni.1",  "zuni.2"),
   species="PM",
+  SNV.afterpos =TRUE,
   SNV.unknown.state=FALSE # if want -9 for SNV it's own state ("3"), otherwise assume unknowns are SNV negative ("1")
 )
 
