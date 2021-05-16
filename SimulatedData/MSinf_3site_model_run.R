@@ -102,6 +102,16 @@ parameters <- c("alpha.0",
 )
 
 
+#test.output <- jags(data     = bugs.data,
+#                                               inits, 
+#                                               parameters, 
+#                                               "MSinf_3site_model_specification.bug", 
+#                                               n.chains = 1, 
+#                                               n.thin   = 2, 
+#                                               n.iter   = 10, 
+#                                               n.burnin = 4)
+
+
 
 
 # date before run  
@@ -115,8 +125,50 @@ MSinf.3site.simulation.output <- jags.parallel(data     = bugs.data,
                                      n.iter   = 30000, 
                                      n.burnin = 10000)
 
-date()
+date() # about 16 hours
 save(MSinf.3site.simulation.output,file="SimulatedData/MSinf3sitesimoutput.RData")
+
+
+MSinf.3site.simulation.output
+#Inference for Bugs model at "MSinf_3site_model_specification.bug", fit using jags,
+#3 chains, each with 30000 iterations (first 10000 discarded), n.thin = 5
+#n.sims = 12000 iterations saved
+#                  mu.vect sd.vect     2.5%      25%       50%       75%
+#alpha.0             0.954   0.101    0.757    0.887     0.952     1.023
+#alpha.inf          -0.951   0.155   -1.255   -1.055    -0.951    -0.847
+#alpha.inf.male     -0.369   0.196   -0.751   -0.503    -0.372    -0.236
+#alpha.ndvi          0.250   0.078    0.097    0.197     0.250     0.302
+#alpha.season[1]     0.901   0.163    0.586    0.793     0.899     1.009
+#alpha.season[2]    -0.511   0.150   -0.803   -0.613    -0.510    -0.410
+#alpha.season[3]    -0.272   0.170   -0.603   -0.386    -0.273    -0.159
+#beta.0             -1.853   0.155   -2.154   -1.958    -1.853    -1.747
+#beta.I              1.424   0.445    0.544    1.128     1.426     1.721
+#beta.male           0.497   0.154    0.196    0.392     0.495     0.601
+#sigma.0             0.227   0.031    0.165    0.205     0.227     0.248
+#sigma.inf           0.053   0.068   -0.077    0.006     0.053     0.099
+#deviance        10015.811  47.689 9925.424 9983.377 10015.113 10047.853
+
+                     #97.5%  Rhat n.eff
+#alpha.0             1.155 1.001  7700
+#alpha.inf          -0.652 1.001  4200
+#alpha.inf.male      0.011 1.001  4800
+#alpha.ndvi          0.403 1.001 12000
+#alpha.season[1]     1.227 1.001  4400
+#alpha.season[2]    -0.220 1.001 12000
+#alpha.season[3]     0.060 1.001  8700
+#beta.0             -1.551 1.001 12000
+#beta.I              2.297 1.001 12000
+#beta.male           0.804 1.001 12000
+#sigma.0             0.289 1.001  8300
+#sigma.inf           0.186 1.001  6900
+#deviance        10109.760 1.001 12000
+
+#For each parameter, n.eff is a crude measure of effective sample size,
+#and Rhat is the potential scale reduction factor (at convergence, Rhat=1#).
+
+#DIC info (using the rule, pD = var(deviance)/2)
+#pD = 1137.2 and DIC = 11153.1
+#DIC is an estimate of expected predictive error (lower deviance is better).
 
 
 library(MCMCvis)

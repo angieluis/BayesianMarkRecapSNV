@@ -252,7 +252,7 @@ dirty.data <- cleaned.data
 cleaned.data$date <- cleaned.data$date.ymd
 cleaned.data$site_web <- paste(cleaned.data$site,cleaned.data$web,sep="_")
 cleaned.data$tag_site <- paste(cleaned.data$tag,cleaned.data$site,sep="_")
-
+cleaned.data$snv_adj <- cleaned.data$snv_pos
 
 ###  make diversity data (for I) -----------------------------------#
 
