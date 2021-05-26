@@ -170,6 +170,18 @@ MSinf.3site.simulation.output
 #pD = 1137.2 and DIC = 11153.1
 #DIC is an estimate of expected predictive error (lower deviance is better).
 
+########################## not bad
+# actual values:
+#alpha.0            = 1 
+#alpha.season       = c(1,-0.5,0) 
+#alpha.ndvi         = 0.2
+#alpha.inf          = -1
+#alpha.inf.male     = -0.5
+#sigma.0            = 0.1 
+#sigma.inf          = 0.1
+#beta.0             = -2
+#beta.male          = 0.5
+#beta.I             = 2
 
 library(MCMCvis)
 MCMCplot(MSinf.3site.simulation.output,xlim = c(-4, 4),ref_ovl = TRUE)
