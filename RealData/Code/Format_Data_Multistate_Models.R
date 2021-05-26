@@ -78,7 +78,7 @@ covariate.data_GC <- multisite.monthly.covariate.fun(
   sessions = session.list_GC$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("grandcanyon.e","grandcanyon.m","grandcanyon.t"),
     # list of temporal covariates and their time lags
@@ -213,7 +213,7 @@ covariate.data_L <- multisite.monthly.covariate.fun(
   sessions = session.list_L$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("limestone.c1", "limestone.s1", "limestone.s2"),
   # list of temporal covariates and their time lags
@@ -347,7 +347,7 @@ covariate.data_N <- multisite.monthly.covariate.fun(
   sessions = session.list_N$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("navajo.1",   "navajo.2"),
   # list of temporal covariates and their time lags
@@ -481,7 +481,7 @@ covariate.data_P <- multisite.monthly.covariate.fun(
   sessions = session.list_P$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("placitas.1", "placitas.2",  "placitas.3"),
   # list of temporal covariates and their time lags
@@ -615,7 +615,7 @@ covariate.data_WC <- multisite.monthly.covariate.fun(
   sessions = session.list_WC$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("walnutcreek.a", "walnutcreek.w"),
   # list of temporal covariates and their time lags
@@ -749,7 +749,7 @@ covariate.data_Z <- multisite.monthly.covariate.fun(
   sessions = session.list_Z$all.sessions,
   temporal.data = sw.temp.data, 
   multistate=TRUE,
-  diversity.data = scaled.MNAs.diversity.interp.longdata,
+  diversity.data = MNAs.diversity.interp.longdata,
   remove.na=TRUE,
   site.webs = c("zuni.1",  "zuni.2"),
   # list of temporal covariates and their time lags
