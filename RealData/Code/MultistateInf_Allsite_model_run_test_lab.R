@@ -4,10 +4,6 @@
 
 #################################################################################
 ## Issues: 
-## It's not handling NAs in predictor variables, e.g., I.dat - need to interpolate.
-## Check the diversity data function and the covariate data function
-## There was a remove.na option, which will work for first value, but not missing
-## NAs in the middle.
 #################################################################################
 
 ## This contains the covariates from the  Grand Canyon Max Model  ------------------- ##
@@ -28,7 +24,8 @@
    source("Code/Multistate_Combined_GCModelCode2.R")
 
    
-
+# check that diversity data isn't already standardized
+  maxI <- 20
    
 ## Bundle data -------------------------------------------------------------- ##
 
@@ -64,7 +61,8 @@
       tmax                  = covariate.data$tmax6_0,
       swe                   = covariate.data$swe_0,
       swe.winter            = covariate.data$swewinter_0,
-      I.dat                 = covariate.data$MNI_0
+      maxI                  = maxI,
+      I.dat                 = covariate.data$MNI_0/maxI
       
        )
 
@@ -101,6 +99,7 @@
          sigma.inf.male     = runif(1, 0, 1),
          beta.0             = runif(1, 0, 1),
          beta.male          = runif(1, 0, 1),
+         beta.I             = runif(1, 0, 1),
          beta.site          = runif(max(site) - 1, 0, 1)
          
       )
@@ -139,6 +138,7 @@
                    "sigma.inf.male",
                    "beta.0",
                    "beta.male",
+                   "beta.I",
                    "beta.site"
                    
                     )
@@ -168,15 +168,6 @@
  # save session data
    save.image("combined3sites_MSinf_GCModelOutput2.RData")
 
-   ## took a week and then:
-   # Error in checkForRemoteErrors(lapply(cl, recvResult)) : 
-   #3 nodes produced errors; first error: Error in node z[3446,76]
-   #Cannot overwrite value of observed node
-
-   # The capture histories have 2 0 1 1 2 1 
-   # not sure if the problem is because it goes from 2 to 1 and I assume that can't happen, or if there is another 
-   # problem. Because the one it says it is observed at 76, which is correct, so why is it trying to estimate that?
-   # There is an inital value for the places where it assumes are known states, which there shouldn't be. 
    
 ## -------------------------------------------------------------------------- ##
    
