@@ -2,17 +2,8 @@
 
 
 ## To do: ----------------------------------------------------------##
-# 1:    I'm assuming can't go from infected to uninfected. Check data.
+# 
 # 2:    Think about how to model beta. 
-#         - I don't think immig is immigration but the density-
-#           independent part of transmission. Immigration can 
-#           automatically be included by animals coming in with state 2.
-#           I think I should remove this and/or estimate q
-#         - Think about transform. Maybe logit is ok, 
-#           because standardizing I.dat to max 1,
-#           which will make beta larger
-#         - should vary by site or web
-#         - need infected immigration
 #         - eventually want to vary by diversity, etc
 #         - maybe estimate q
 ## -----------------------------------------------------------------##
@@ -82,13 +73,13 @@
       
       beta.0 ~ dnorm(0, 0.4)T(-10, 10)
       beta.male ~ dnorm(0, 0.4)T(-10, 10)
+      beta.I ~ dnorm(0, 0.4)T(-10, 10)
          
-      for (s in 1:(max(site)-1)){     #for each sex
+      for (s in 1:(max(site)-1)){     
         beta.site[s] ~ dnorm(0, 0.4)T(-10, 10) 
        } 
       beta.site.use <- c(0,beta.site)
-      immig ~ dnorm(0, 0.4)T(-10, 10)
-	  #q ~ dunif(0, 1)
+      
 	  
 	  
       ##### PRIORS FOR RECAPTURE #####
@@ -109,7 +100,7 @@
       for(w in 1:(max(web) - 1)) {
         sigma.web[w] ~ dnorm(0, 0.4)T(-10, 10)       # prior for coef on web
         }
-        sigma.web.use <- c(0, sigma.web)
+      sigma.web.use <- c(0, sigma.web)
         
         
         ##### MODEL FOR PHI #####
@@ -171,15 +162,11 @@
        
       for(i in 1:nind) {
     
-          beta[i] <-    beta.0 + 
-          				beta.male * sex[i]  +
-          				beta.site.use[site[i]]     
-          				
-          
           for(m in 1:(n.months[i] - 1)) {           
 
-            logit(psiSI[i, m]) <- beta[i] * I.dat[i, m]  + immig
-								 #beta[i] * I.dat[i,m]/((N.dat[i,m]+0.000001)^q) + immig
+            logit(psiSI[i, m]) <- beta.0 + beta.male * sex[i] +
+          				beta.site.use[site[i]] + beta.I * I.dat[i, m]
+            
           } #m          
       } #i
 
@@ -276,10 +263,6 @@
           y[obs] ~ dcat(po[z[id[obs], longmonth.obs[obs]], id[obs], longmonth.obs[obs], sec[obs],])
         } # obs
         
-       ### Compilation error.  z[1,20] is a logical node and cannot be observed
-       ### This is the first time that individual was observed. Can I only model from f[i]+1?
-       ### But this wasn't a problem with the CJS models....
-       
         
         
         } # model
