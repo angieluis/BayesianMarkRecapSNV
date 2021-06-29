@@ -24,7 +24,7 @@
    source("Code/Multistate_Combined_GCModelCode2.R")
 
    
-# check that diversity data isn't already standardized
+#  diversity data isn't already standardized
   maxI <- 20
    
 ## Bundle data -------------------------------------------------------------- ##
@@ -163,7 +163,15 @@
    
  # date after run
    date()
-
+   
+   
+# ran for 1 month and then said
+   # Error in unserialize(node$con) : error reading from connection
+   # after some googling, it could be a problem with memory, fuckinA
+   # i need to try this on google server or something
+   
+   
+   
 
  # save session data
    save.image("combined3sites_MSinf_GCModelOutput2.RData")
