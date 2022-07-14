@@ -4,7 +4,6 @@
 ## affect K and that drives survival and birth rates. 
 
 
-    ## Think about transforms - need to stop things going negative, etc
     ## Think about infection - right now have an intercept term that 
     ##   represents density-independent transmission, but it's not infected
     ##   immigration. No new recruits are infected. Maybe get rid of that 
@@ -16,14 +15,16 @@
 ## Set parameter Values for simulation
 ######################################################
 
-## Survival parameters
-alpha0 <- 0.95     # survival intercept (female survival at N=0)
-alpha0.male <- -0.05 # reduction in male survival
-alpha0.infected <- -0.2 # reduction in infected survival
-alpha1 <- 0.7     #(survival at (disease-free) equilibrium, N=K; recruitment rate at equilibrium is 1-alpha1, mortality) # for just females really
+## Mortality parameters
+m0 <- -2.944439 #logit(0.05)  #survival is 0.95 at N=0
+me <- -0.8472979 #logit(0.3) # survival at equilibrium is 0.7
+m.male <- 0.2 # additional mortality for males
+m.infected <- 0.6
 
 # Recruitment parameters
-b0 <- 1.5         # recruitment rate intercept at N=0
+b0 <- 0.6931472 #log(2) # birth rate at N=0 is 2
+# be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
+
 
 # K parameters
 k.0 <- 3.1        # K is exp(k.0) at mean ndvi in winter 
@@ -39,33 +40,48 @@ beta.male          = 0.5
 beta.I             = 2
 
 
+
 #############################################################################
 ############## Explore relationships
 #############################################################################
 
-source("RealData/Code/01_sw_data_functions_more.R")
-
 NK<-seq(0,2,length=50) # N/K, so equilibrium is at 1.
 
+rev.logit <- function(x) {
+  exp(x) / (1 + exp(x))
+}
 
-# alpha0 constrained between 0 and 1 (alpha.reductions small distributions centered on 0)
-# b0 is non-negative
+ddbirthfun <- function(NK, b0, be){
+  exp(b0 + (be-b0)*NK)
+}
 
-survival.rate.female <- alpha0 - (alpha0-alpha1)*NK
-survival.rate.male <- alpha0 - (alpha0-alpha1)*NK + alpha0.male
-survival.rate.inffemale <- alpha0 - (alpha0-alpha1)*NK + alpha0.infected
-survival.rate.infmale <- alpha0 - (alpha0-alpha1)*NK + alpha0.infected + alpha0.male
-birth.rate <- b0 - (b0-(1-alpha1)) * NK
+ddmortfun <- function(NK,m0, me){
+  rev.logit(m0 + (me-m0)*NK)
+}
 
-plot(NK,birth.rate,type="l",col="slateblue",ylim=c(0,b0),ylab="Rates",xlab="N/K",main="Density-Dependent Rates")
-lines(NK,1-survival.rate.female,col="tomato")
-lines(NK,1-survival.rate.male,col="tomato",lty=2)
-lines(NK,1-survival.rate.inffemale,col="green")
-lines(NK,1-survival.rate.infmale,col="green",lty=2)
+
+
+
+birth.rate <- exp(b0 + (be-b0)*NK)
+
+mortality.rate.female <- rev.logit(m0 + (me-m0)*NK)
+mortality.rate.male <- rev.logit(m0 + (me-m0)*NK + m.male)
+mortality.rate.inffemale <- rev.logit(m0 + (me-m0)*NK + m.inffemale)
+mortality.rate.infmale <- rev.logit(m0 + (me-m0)*NK + m.infmale)
+
+
+plot(NK,birth.rate,type="l",col="slateblue",ylim=c(0,1.5),
+     ylab="Rates",xlab="N/K",main="Density-Dependent Rates")
+lines(NK,mortality.rate.female,col="tomato")
+lines(NK,mortality.rate.male,col="tomato",lty=2)
+lines(NK,mortality.rate.inffemale,col="green")
+lines(NK,mortality.rate.infmale,col="green",lty=2)
 abline(v=1,lty=3)
-text(1,b0,"DFE")
-legend("topright",c("recruitment rate","mortality rate female uninfected","mortality rate male uninfected", "mortality rate female infected","mortality rate male infected"),lty=c(1,1,2,1,2),col=c("slateblue","tomato","tomato","green","green"),bty="n",cex=0.8)
-
+text(1,1,"DFE")
+legend("topright",c("recruitment rate","mortality rate female uninfected",
+                    "mortality rate male uninfected", "mortality rate female 
+                    infected","mortality rate male infected"),lty=c(1,1,2,1,2),
+       col=c("slateblue","tomato","tomato","green","green"),bty="n",cex=0.8)
 
 
 ### Make K time varying as a function of season and ndvi --------------------#
@@ -165,10 +181,10 @@ for(w in 1:n.webs){
     for(i in 1:dim(z[[w]])[1]) {
       
       # calculate survival based on sex, infection, and N/K (last month)
-      phi <- alpha0 - (alpha0-alpha1)* N[[w]][m-1]/ K[[w]][m-1] +
-         ifelse(z[[w]][i,m-1]==2, alpha0.infected, 0) +
-         alpha0.male * zsex[i]
-      phi <- ifelse(phi<0,0,phi)
+      mort <- rev.logit(m0 + (me-m0)* N[[w]][m-1]/ K[[w]][m-1] +
+         ifelse(z[[w]][i,m-1]==2, m.infected, 0) +
+         m.male * zsex[i])
+      phi <- 1-mort
       # calculate prob of transition
         last.state <- z[[w]][i,m-1]
         
@@ -205,18 +221,18 @@ for(w in 1:n.webs){
     
     
     # keep track of Phis
-    Phi.uf[[w]][m-1] <- alpha0 - (alpha0-alpha1)* N[[w]][m-1]/ K[[w]][m-1]
+    Phi.uf[[w]][m-1] <- phi
  
     
     ############## Add individuals (rows) to z based on births
   
-      birth.rate <- b0 - (b0-(1-alpha1)) * N[[w]][m-1]/ K[[w]][m-1]
-      birth.rate <- ifelse(birth.rate<0,0,birth.rate)
-      new.indivs <- rpois(1,birth.rate*sum(length(which(z[[w]][,m]>0)))) 
-      z.new <- matrix(rep(c(rep(0,m-1),1,rep(NA,n.months-m)),new.indivs),byrow=TRUE,nrow=new.indivs,ncol=n.months)
-      z[[w]] <- rbind(z[[w]],z.new)
-      # assume equal chance of males and females
-      zsex <- c(zsex, sample(c(0,1),size=new.indivs,replace=TRUE)) 
+    be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
+    birth.rate <- exp(b0 + (be-b0) * N[[w]][m-1]/ K[[w]][m-1])
+    new.indivs <- rpois(1,birth.rate*sum(length(which(z[[w]][,m]>0)))) 
+    z.new <- matrix(rep(c(rep(0,m-1),1,rep(NA,n.months-m)),new.indivs),byrow=TRUE,nrow=new.indivs,ncol=n.months)
+    z[[w]] <- rbind(z[[w]],z.new)
+    # assume equal chance of males and females
+    zsex <- c(zsex, sample(c(0,1),size=new.indivs,replace=TRUE)) 
     
     
     ############## Save individual data
@@ -227,7 +243,6 @@ for(w in 1:n.webs){
   
 } #webs
 
-# infection pretty high. 
 
 
 
