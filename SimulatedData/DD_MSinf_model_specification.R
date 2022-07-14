@@ -4,9 +4,9 @@
 
 ## To do: ----------------------------------------------------------##
 
-
+## Add birth function!
 ## figure out how to calculate N and I from z that is site specific
-## or revert to MNA, MNI
+##  right now using MNA, MNI as supplied data
 ## -----------------------------------------------------------------##
 
 
@@ -76,22 +76,22 @@
             log(K[i,m]) <- k.0  + k.ndvi*ndvi[i,m] + k.season.use[season[i,m]]
     
             # calculate population size 
-            N[i,m] <- # not sure how to do this beacuse N is web specific  
+            #N[i,m] <- # not sure how to do this beacuse N is web specific  
     
             # calculate number infected
-            I[i,m] <- # ditto   
+            #I[i,m] <- # ditto   
     
  
             ### Phi for uninfected
             logit(mortS[i, m]) <-            
-              m.0 + (me-m0) * N[i,m]/K[i,m] +
+              m.0 + (me-m0) * N.dat[i,m]/K[i,m] +
               m.male * sex[i]
               
             phiS <- 1 - mortS
  
             ### Phi for infected
             logit(mortI[i, m]) <-              
-              m.0 + (me-m0) * N[i,m]/K[i,m] +
+              m.0 + (me-m0) * N.dat[i,m]/K[i,m] +
               m.male * sex[i] +
               m.infected 
               
@@ -109,7 +109,7 @@
           
           for(m in 1:(n.months[i] - 1)) {           
 
-            logit(psiSI[i, m]) <- beta.male * sex[i] + beta.I * I[i, m]/maxI  
+            logit(psiSI[i, m]) <- beta.male * sex[i] + beta.I * I.dat[i, m]/maxI  
             
           } #m          
       } #i
