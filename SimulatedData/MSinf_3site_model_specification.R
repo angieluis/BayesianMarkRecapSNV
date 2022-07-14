@@ -97,7 +97,10 @@
           
           for(m in 1:(n.months[i] - 1)) {           
 
-            logit(psiSI[i, m]) <- beta.0 + beta.male * sex[i] + beta.I * I.dat[i, m]  # check indexing. should this be m-1?
+            logit(psiSI[i, m]) <- beta.0 + beta.male * sex[i] + beta.I * I.dat[i, m]  
+            
+            # Should I.dat be [m-1]? No. Psi[1] is the probability of transition over interval 1->2. 
+            # So probability of becoming infected by month 2 (Psi[1]) is determined by number of infecteds at month 1 (I.dat[1]).
 								 
           } #m          
       } #i
@@ -110,7 +113,7 @@
         for(i in 1:nind) {
           for(m in months.trapped.mat[i, 1:length.months.trapped[i]]) {
 
-            # updated to account for differnt secondary occasions
+            # accounts for different secondary occasions
             for(d in 1:n.sec.occ[i, Prim[i,m]]) {               
               logit(pS[i, m, d]) <-
                 sigma.0 
