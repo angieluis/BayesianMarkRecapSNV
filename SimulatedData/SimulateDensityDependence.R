@@ -29,16 +29,17 @@ b0 <- 0.6931472 #log(2) # birth rate at N=0 is 2
 # K parameters
 k.0 <- 3.1        # K is exp(k.0) at mean ndvi in winter 
 k.season <- c(0.6,-0.4,-0.3) # spring, summer, fall, (winter is intercept)
-k.ndvi <- 0.5
+k.ndvi <- 0.35
 
+# detection parameters
 sigma.0            = 0.1 
 sigma.inf          = 0.1
 
 # Infection parameters
-beta.0             = -2 # background infected immigration
-beta.male          = 0.5
-beta.I             = 2
-
+#beta.0             = -2 # background infected 
+beta.male          = -5
+beta.I             = 3
+rho                = 0.01 # probability a new recruit is infected (set prior from 0 to 1)  
 
 
 #############################################################################
@@ -66,8 +67,8 @@ birth.rate <- exp(b0 + (be-b0)*NK)
 
 mortality.rate.female <- rev.logit(m0 + (me-m0)*NK)
 mortality.rate.male <- rev.logit(m0 + (me-m0)*NK + m.male)
-mortality.rate.inffemale <- rev.logit(m0 + (me-m0)*NK + m.inffemale)
-mortality.rate.infmale <- rev.logit(m0 + (me-m0)*NK + m.infmale)
+mortality.rate.inffemale <- rev.logit(m0 + (me-m0)*NK + m.infected)
+mortality.rate.infmale <- rev.logit(m0 + (me-m0)*NK + m.infected + m.male)
 
 
 plot(NK,birth.rate,type="l",col="slateblue",ylim=c(0,1.5),
@@ -191,7 +192,8 @@ for(w in 1:n.webs){
         # if last.state uninfected
         if(last.state==1){
           # calculate prob of becoming infected
-          psiSI <- rev.logit(beta.0 + beta.male * zsex[i] + beta.I * I[[w]][m-1]/maxI)
+          psiSI <- rev.logit(#beta.0 + 
+            beta.male * zsex[i] + beta.I * I[[w]][m-1]/maxI)
           
           # stay uninfected (1) with prob phi*(1-psiSI) 
           # become infected (2) with prob phi*psiSI
@@ -229,7 +231,9 @@ for(w in 1:n.webs){
     be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
     birth.rate <- exp(b0 + (be-b0) * N[[w]][m-1]/ K[[w]][m-1])
     new.indivs <- rpois(1,birth.rate*sum(length(which(z[[w]][,m]>0)))) 
-    z.new <- matrix(rep(c(rep(0,m-1),1,rep(NA,n.months-m)),new.indivs),byrow=TRUE,nrow=new.indivs,ncol=n.months)
+    z.new <- matrix(rep(c(rep(0,m-1), # before now, the animal was not here
+                          sample(c(1,2),1,prob=c(1-rho,rho)), # now at month m, animal is here, could be infected (2) with prob rho
+                          rep(NA,n.months-m)),new.indivs),byrow=TRUE,nrow=new.indivs,ncol=n.months)
     z[[w]] <- rbind(z[[w]],z.new)
     # assume equal chance of males and females
     zsex <- c(zsex, sample(c(0,1),size=new.indivs,replace=TRUE)) 
