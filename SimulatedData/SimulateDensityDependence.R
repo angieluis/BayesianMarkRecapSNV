@@ -2,14 +2,8 @@
 ## Simulate Data and explore the model for density-dependent Multistate 
 ## Infection Robust design model, where environmental drivers (NDVI)
 ## affect K and that drives survival and birth rates. 
-
-
-    ## Think about infection - right now have an intercept term that 
-    ##   represents density-independent transmission, but it's not infected
-    ##   immigration. No new recruits are infected. Maybe get rid of that 
-    ##   intercept but include some small chance of new recruits being infected
-    ##   (to be estimated) - I worry this will mess with estimation.
 #############################################################################
+
 
 ######################################################
 ## Set parameter Values for simulation
@@ -449,7 +443,8 @@ for(w in 1:n.webs){
                     tmax = 0, 
                     swe  = 0,
                     swewinter = 0,
-                    MNI = 0)
+                    MNI = 0,
+                    pm = 0)
   ) 
   
   
