@@ -4,7 +4,7 @@
 
 ## To do: ----------------------------------------------------------##
 
-## Add birth function!
+## Add birth function! Remove f stuff?
 ## figure out how to calculate N and I from z that is site specific
 ##  right now using MNA, MNI as supplied data
 ## -----------------------------------------------------------------##
@@ -54,7 +54,7 @@
       for(m in 1:3) {
         k.season[m] ~ dnorm(0, 0.4)T(-10, 10)   # prior for coef on season
        }
-      k.season.use <- c(0, alpha.season) 
+      k.season.use <- c(0, k.season) 
 
        
       ##### INFECTION PRIORS  #####
@@ -84,18 +84,18 @@
  
             ### Phi for uninfected
             logit(mortS[i, m]) <-            
-              m.0 + (me-m0) * N.dat[i,m]/K[i,m] +
+              m0 + (me-m0) * N.dat[i,m]/K[i,m] +
               m.male * sex[i]
               
-            phiS <- 1 - mortS
+            phiS[i, m] <- 1 - mortS[i,m]
  
             ### Phi for infected
             logit(mortI[i, m]) <-              
-              m.0 + (me-m0) * N.dat[i,m]/K[i,m] +
+              m0 + (me-m0) * N.dat[i,m]/K[i,m] +
               m.male * sex[i] +
               m.infected 
               
-            phiI <- 1 - mortI
+            phiI[i, m] <- 1 - mortI[i,m]
 
             } # m for months
           } # i for individual
