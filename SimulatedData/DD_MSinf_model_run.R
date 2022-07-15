@@ -3,7 +3,7 @@
 
 ############################################################
 ## Problems:
-##  
+##  still need to change model to add birth stuff
 ############################################################
 
 
@@ -108,14 +108,14 @@ parameters <- c("m0",
 )
 
 
-test.output <- jags(data     = bugs.data,
-                                               inits, 
-                                               parameters, 
-                                               "DD_MSinf_model_specification.bug", 
-                                               n.chains = 1, 
-                                               n.thin   = 2, 
-                                               n.iter   = 10, 
-                                               n.burnin = 4)
+# test.output <- jags(data     = bugs.data,
+#                                                inits, 
+#                                                parameters, 
+#                                                "DD_MSinf_model_specification.bug", 
+#                                                n.chains = 1, 
+#                                                n.thin   = 2, 
+#                                                n.iter   = 10, 
+#                                                n.burnin = 4)
 
 #Error in if (n.months[i] != max(n.months)) { : 
 #    missing value where TRUE/FALSE needed
@@ -125,19 +125,19 @@ test.output <- jags(data     = bugs.data,
 
 
 
-# date before run  
-#date()
-#DD.MSinf.simulation.output <- jags.parallel(data     = bugs.data,
-#                                     inits, 
-#                                     parameters, 
-#                                     "DD_MSinf_model_specification.bug", 
-#                                     n.chains = 3, 
-#                                     n.thin   = 5, 
-#                                     n.iter   = 30000, 
-#                                     n.burnin = 10000)
+#date before run
+date()
+DD.MSinf.simulation.output <- jags.parallel(data     = bugs.data,
+                                    inits,
+                                    parameters,
+                                    "DD_MSinf_model_specification.bug",
+                                    n.chains = 3,
+                                    n.thin   = 5,
+                                    n.iter   = 30000,
+                                    n.burnin = 10000)
 
-date() # about 16 hours
-save(MSinf.3site.simulation.output,file="SimulatedData/DDMSinfsimoutput.RData")
+date() # 
+save(DD.MSinf.simulation.output,file="SimulatedData/DDMSinfsimoutput.RData")
 
 
 DD.MSinf.simulation.output
