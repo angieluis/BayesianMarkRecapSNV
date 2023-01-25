@@ -275,14 +275,18 @@ sex <- matrix(NA, nrow=max(CHlistnrows), ncol= n.webs)
 for(w in 1:n.webs){
   sex[1:CHlistnrows[w],w] <- indiv.data.obs[[w]]$sex
 }
-
-
 ## covariates like ndvi and season are now [w,m] instead of [i,m]
-ndvi <- matrix(NA, nrow=n.webs , ncol=max(nzcols))
-season <- matrix(NA, nrow=n.webs , ncol=max(nzcols))
+## for calculating K for dummy time step I need covariate data for a month earlier
+## (prob need to update simulation with this too)
+ndvi <- matrix(NA, nrow=n.webs , ncol=max(nzcols)+1)
+season <- matrix(NA, nrow=n.webs , ncol=max(nzcols)+1)
+tempcovdata2 <- list()
 for(w in 1:n.webs){
-  ndvi[w,1:nzcols[w]] <- tempcovdata[[w]]$ndvi
-  season[w,1:nzcols[w]] <- tempcovdata[[w]]$season
+  tempcovdata2[[w]] <- sw.temp[which(sw.temp$site.web==web),]
+  s.ind <- which(tempcovdata2[[w]]$date2==start.date) - 1
+  tempcovdata2[[w]] <- tempcovdata[[w]][s.ind:(s.ind+(n.months)),]
+  ndvi[w,1:(nzcols[w]+1)] <- tempcovdata2[[w]]$ndvi
+  season[w,1:(nzcols[w]+1)] <- tempcovdata2[[w]]$season
 }
 
 n.inds <- CHlistnrows
