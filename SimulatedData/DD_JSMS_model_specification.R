@@ -7,15 +7,7 @@
 
 
 ## To do: ----------------------------------------------------------##
-
-## Error on indexing of N. Need to check all indexing.
-## Check that the derived params and other indexing are accounting 
-## for dummy occasion. (See book p325)
-## And I don't want to calculate birth of prob of entrance from m1 to m2
-## Because that assumes pop=0 at dummy occasion and would overestimate birth.
-## Need priors for gamma[w,m]? Or change formulation? And need priors for that? 
-## The book defines priors but doesn't give initial values or monitor them.
-## Or how are they functions of derived birth rates?
+## fix inconsistent indexing, e.g., gamma[m,w] vs f[w,m]  
 ## -----------------------------------------------------------------##
 
 sink("DD_JSMS_model_specification.bug")
@@ -66,25 +58,21 @@ cat("
       sigma.inf   ~ dnorm(0, 0.4)T(-10, 10)  # prior for infection on p
 
 
-
+     ##### PRIORS FOR initial population sizes #####
+      for(w in 1:n.webs) {
+        N1.est[w] ~ dnorm(20, 5)T(0, 100)   
+       }
 
 
        
         ##### MODEL FOR PHI #####
       for(w in 1:n.webs){
-        for(i in 1:n.inds[w]) {
-          for(m in 1:(n.months[w] - 1)) {              
-            
-            # calculate K for that month based on ndvi and season
-            log(K[w,m]) <- k.0  + k.ndvi*ndvi[w,m] + k.season.use[season[w,m]]
-    
-          #### Calculate web-specific N  
+        for(m in 1:(n.months[w] - 1)) {              
           
-            Ns[i,m,w] <- equals(z[i,m,w], 2)  #  in book this had m-1 i think to remove dummy, but I changed
+          # calculate K for that month based on ndvi and season
+          K[w,m] <- exp(k.0  + k.ndvi*ndvi[w,m] + k.season.use[season[w,m]])
 
-            N[w,m]  <- sum(Ns[,m,w])       # Actual population size  ---------------------------------------- how can it calc N when hasn't finished the m loop. Should i rearrange order of loops? or refer to m-1? or put outside of this set of loops? How do I get N to get z to get N? Circular. Indexing!
-
-         
+          for(i in 1:n.inds[w]) {
  
             ### Phi 
             logit(mort[i, m, w]) <-            
@@ -93,8 +81,8 @@ cat("
               
             phi[i, m, w] <- 1 - mort[i,m, w]
 
-            } # m for months
-          } # i for individual
+            } # i for individual 
+          } # m for months
       } # w for webs
         
         
@@ -161,6 +149,8 @@ cat("
          z[i,1,w] <- 1   # Make sure that all individuals are in state 1 at t=1 (dummy occasion)
          # No one has entered yet (state 1) at t=1, because when input data above (Ch.primary.du), add a row before the actual data (where no has entered yet)
 
+
+
         for (m in 2:n.months[w]){  #
           # State process: draw S(t) given S(t-1)
           z[i,m,w] ~ dcat(ps[z[i,m-1,w], i, m-1, w, ])
@@ -177,7 +167,7 @@ cat("
       # Define probabilities of State(t+1) given State(t)
       for (m in 2:(n.months[w])){
         for(d in 1:n.sec.occ){
-        CHarray.aug.du[i, m, d, w] ~ dcat(po[z[i, m, w], i, m-1, d, w, ])  # think it should be m even tho book has m-1 
+        y[i, m, d, w] ~ dcat(po[z[i, m, w], i, m, d, w, ])  # think it should be m even tho book has m-1 
                  ## update this if not trapped every month (long.month, etc)
         } #d
       } #m
@@ -189,45 +179,41 @@ cat("
 
 
     ########################## Calculate derived population parameters
-  for(w in 1:n.webs){  
-    for (m in 1:(n.months[w]-1)){
-      qgamma[m,w] <- 1-gamma[m,w] # prob of not entering
-    }
-    cprob[1,w] <- gamma[1,w]  # cummulative prob of entering 
-    for (m in 2:(n.months[w]-1)){
-      cprob[m,w] <- (gamma[m,w]) * prod(qgamma[1:(m-1),w])
-    } #m
-    psi <- sum(cprob[,w])            # Inclusion probability
-    for (m in 1:(n.months[w]-1)){
-      b[m,w] <- (cprob[m,w] + 0.001) / (psi + 0.001)      # Entry probability
-    } #m
-  } # w
   
-    # for(w in 1:n.webs){             # don't need this because above for N in model
-    #   for (i in 1:n.inds[w]){
-    #     for (m in 2:n.months[w]){
-    #       al[i,m-1,w] <- equals(z[i,m,w], 2)             
-    #     } #t
-    #     for (m in 1:(n.months[w]-1)){
-    #       d[i,m,w] <- equals(z[i,m,w]-al[i,m,w],0)
-    #     } #t   
-    #     alive[i,w] <- sum(al[i, ,w])
-    #   } #i
-    # } # w
+    for(w in 1:n.webs){             
+      for (i in 1:n.inds[w]){
+        for (m in 1:n.months[w]){
+          alive[i,w,m] <- equals(z[i, m, w], 2)
+          not.yet.entered[i,w,m] <- equals(z[i, m, w], 1)
+        } #t
+        for (m in 2:n.months[w]){
+          just.entered[i, w, m] <- equals(z[i, m-1, w]-alive[i, w, m],0)
+        } #t
+        ever.alive[i,w] <- sum(alive[i, w, ])
+      } #i
+    } # w
+    
     
   be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
   
+  
   for(w in 1:n.webs){
-    for (m in 2:(n.months[w]-1)){
-      B[m,w] <- sum(d[,m,w])       # Number entries   #the expected B[m,w]=M*cprob[m,w], where M is the augmented number of individuals (larger than pop)
-      f[m,w]  <- (B[m,w] + 0.001)/(N[m,w] + 0.001)         # total per capita recruitment rate  
+    N[w, 1] <- N1.est[w]
+    B[w, 1] <- 0                             # Number entries
+    Bpossible[w, 1] <- sum(not.yet.entered[ , w, 1])
+    
+    for (m in 2:n.months[w]){
+      N[w, m] <- sum(alive[ ,w, m]) 
+      f[w, m-1] <- exp(b0 + (be-b0) * N[w, m-1]/K[w, m-1])  # total per capita recruitment rate
+      B.predicted[w, m]   <-  f[w, m-1] * N[w, m-1]         # predicted new recruits = total per capita recruitment rate  *N
+      Bpossible[w, m] <- sum(not.yet.entered[ , w, m])
+      gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
       
-      f[m,w] ~ exp(b0 + (be-b0) * N[w,m-1]/K[w,m-1])  # think about the indexing here. Shoudl it be m-1? What about dummy occasion?
-       ### is  ~ right here? 
+      B[w,m] ~ dpois(B.predicted[w,m]) 
 
     } #m
     for (i in 1:n.inds[w]){
-      v[i,w] <- 1-equals(alive[i,w],0)
+      v[i,w] <- 1-equals(ever.alive[i,w],0)
     } #i
     Nsuper[w] <- sum(v[,w])            # Superpopulation size per web
   }
