@@ -10,6 +10,7 @@
 ## # 3 nodes produced errors; first error: Error in node y[1,2,1,1]
 ## # Node inconsistent with parents
 ## check z calculation, initz, knownz, and gamma[1]
+## Missing B within the m loop calculate B then use as data to fit to predicted B
 
 ## For N/K, do I need to add a 0.001 to the K so it can't be -Inf?
 
@@ -96,22 +97,10 @@ cat("
        
 
     ##### MODEL FOR P #####
-    ##### 4 dimensions [indiv, month, day, web] 
+    # see below for 4 dimensions [indiv, month, day, web] 
      
-      for(w in 1:n.webs){
-        for(i in 1:n.inds[w]) {
-          for(m in months.trapped.mat[w, 1:length.months.trapped[w]]) {
-
-            # accounts for different secondary occasions
-            for(d in 1:n.sec.occ) {               # simplified here for this model n.sec.occ doesn't vary, but could be n.sec.occ[w, Prim[i,m]
-              logit(p[i, m, d, w]) <-
-                sigma.0 
-
-
-              } # d for days
-            } # m for month
-          } # i for individual
-      } # w for web
+    logit(p[i, m, d, w]) <- sigma.0 
+      
 
 
  
@@ -124,29 +113,28 @@ cat("
         ps[1,i,m,w,2] <- gamma[m,w]                 # just entered 
         ps[1,i,m,w,3] <- 0                          # not yet entered to dead
         ps[2,i,m,w,1] <- 0                          # alive to not yet entered
-        ps[2,i,m,w,2] <- phi[i,m,w]                   # alive to alive (survival)
-        ps[2,i,m,w,3] <- 1-phi[i,m,w]                # alive to dead
+        ps[2,i,m,w,2] <- phi[i,m,w]                 # alive to alive (survival)
+        ps[2,i,m,w,3] <- 1-phi[i,m,w]               # alive to dead
         ps[3,i,m,w,1] <- 0                          # dead to not yet entered
         ps[3,i,m,w,2] <- 0                          # dead to alive
         ps[3,i,m,w,3] <- 1                          # dead stay dead
       } #m
-      
-      for (m in months.trapped.mat[w, 1:length.months.trapped[w]]){        
-        for(d in 1:n.sec.occ) {                           # ----------------------ditto simplified
-        
-          # Define probabilities of Observation(m) given State(m)
-          # first index is state, last index is observation
-          # could potentially include observation as wrong state (false neg or pos)
-        po[1,i,m,d,w,1] <- 0              # not yet entered and observed 
-        po[1,i,m,d,w,2] <- 1              # not yet entered and not observed
-        po[2,i,m,d,w,1] <- p[i,m,d,w]     # alive and observed 
-        po[2,i,m,d,w,2] <- 1-p[i,m,d,w]   # alive and not observed
-        po[3,i,m,d,w,1] <- 0              # dead and observed 
-        po[3,i,m,d,w,2] <- 1              # dead and not observed
-        } # d
-      } # m
      } # i
     } # w
+    
+    
+    
+    # Define probabilities of Observation(m) given State(m)
+    # first index is state, last index is observation
+    # could potentially include observation as wrong state (false neg or pos)
+        po[1,1] <- 0              # not yet entered and observed 
+        po[1,2] <- 1              # not yet entered and not observed
+        po[2,1] <- p              # alive and observed 
+        po[2,2] <- 1-p            # alive and not observed
+        po[3,1] <- 0              # dead and observed 
+        po[3,2] <- 1              # dead and not observed
+
+
 
     ############### Likelihood ---------------------------------------#
     # STATE PROCESS
@@ -174,7 +162,7 @@ cat("
       # Define probabilities of State(t+1) given State(t)
       for (m in 2:(n.months[w])){
         for(d in 1:n.sec.occ){
-        y[i, m, d, w] ~ dcat(po[z[i, m, w], i, m, d, w, ])  # think it should be m even tho book has m-1 
+        y[i, m, d, w] ~ dcat(po[z[i, m, w], ])  # think it should be m even tho book has m-1 
                  ## update this if not trapped every month (long.month, etc)
         } #d
       } #m
@@ -186,6 +174,8 @@ cat("
 
 
     ########################## Calculate derived population parameters
+    
+    be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
   
     for(w in 1:n.webs){             
       for (i in 1:n.inds[w]){
@@ -196,38 +186,86 @@ cat("
         for (m in 2:n.months[w]){
           just.entered[i, w, m] <- equals(z[i, m-1, w]-alive[i, w, m],0)
         } #m
-        ever.alive[i,w] <- sum(alive[i, w, ])
       } #i
-    } # w
-    
-    
-  be <- log((exp(me)/(1+exp(me))))   #log(rev.logit(me))
-  
-  
-  for(w in 1:n.webs){
-    N[w, 1] <- N1.est[w]
-    B[w, 1] <- 0                             # Number entries
-    Bpossible[w, 1] <- sum(not.yet.entered[ , w, 1])
-    
-    for (m in 2:n.months[w]){
-      N[w, m] <- sum(alive[ ,w, m]) 
-      f[w, m-1] <- exp(b0 + (be-b0) * N[w, m-1]/K[w, m-1])  # total per capita recruitment rate
-      B.predicted[w, m]   <-  f[w, m-1] * N[w, m-1]         # predicted new recruits = total per capita recruitment rate  *N
-      Bpossible[w, m] <- sum(not.yet.entered[ , w, m])
-      gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
-      
-      B[w,m] ~ dpois(B.predicted[w,m]) 
 
-    } #m
-    for (i in 1:n.inds[w]){
-      v[i,w] <- 1-equals(ever.alive[i,w],0)
-    } #i
-    Nsuper[w] <- sum(v[,w])            # Superpopulation size per web
-  }
+      N[w, 1] <- N1.est[w]
+      B[w, 1] <- 0                             # Number entries
+      Bpossible[w, 1] <- sum(not.yet.entered[ , w, 1])
+    
+      for (m in 2:n.months[w]){
+        N[w, m] <- sum(alive[ ,w, m]) 
+        f[w, m-1] <- exp(b0 + (be-b0) * N[w, m-1]/K[w, m-1])  # total per capita recruitment rate
+        B.predicted[w, m]   <-  f[w, m-1] * N[w, m-1]         # predicted new recruits = total per capita recruitment rate  *N
+        Bpossible[w, m] <- sum(not.yet.entered[ , w, m])
+        gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
+      
+        B[w,m] ~ dpois(B.predicted[w,m]) 
+
+      } #m
+      
+      # for (i in 1:n.inds[w]){
+      #   ever.alive[i,w] <- sum(alive[i, w, ])
+      #   v[i,w] <- 1-equals(ever.alive[i,w],0)
+      # } #i
+      # Nsuper[w] <- sum(v[,w])            # Superpopulation size per web
+      
+    } # w
 }
     ",fill = TRUE)
 sink()
 
 
 
+
+
+
+############# Code for more complicated p models:
+
+##### MODEL FOR P #####
+# for(w in 1:n.webs){
+#   for(i in 1:n.inds[w]) {
+#     for(m in months.trapped.mat[w, 1:length.months.trapped[w]]) {
+#       
+#       # accounts for different secondary occasions
+#       for(d in 1:n.sec.occ) {               # simplified here for this model n.sec.occ doesn't vary, but could be n.sec.occ[w, Prim[i,m]
+#         logit(p[i, m, d, w]) <-
+#           sigma.0 
+#         
+#       } # d for days
+#     } # m for month
+#   } # i for individual
+# } # w for web
+
+
+
+
+### more complicated observation matrix:
+
+# for (m in months.trapped.mat[w, 1:length.months.trapped[w]]){        
+#   for(d in 1:n.sec.occ) {                           # ----------------------ditto simplified
+#     
+#     # Define probabilities of Observation(m) given State(m)
+#     # first index is state, last index is observation
+#     # could potentially include observation as wrong state (false neg or pos)
+#     po[1,i,m,d,w,1] <- 0              # not yet entered and observed 
+#     po[1,i,m,d,w,2] <- 1              # not yet entered and not observed
+#     po[2,i,m,d,w,1] <- p[i,m,d,w]     # alive and observed 
+#     po[2,i,m,d,w,2] <- 1-p[i,m,d,w]   # alive and not observed
+#     po[3,i,m,d,w,1] <- 0              # dead and observed 
+#     po[3,i,m,d,w,2] <- 1              # dead and not observed
+#   } # d
+# } # m
+
+### More complicated likelihood
+# for(w in 1:n.webs){
+#   for (i in 1:n.inds[w]){
+#     # Define probabilities of State(t+1) given State(t)
+#     for (m in 2:(n.months[w])){
+#       for(d in 1:n.sec.occ){
+#         y[i, m, d, w] ~ dcat(po[z[i, m, w], i, m, d, w, ])  # think it should be m even tho book has m-1 
+#         ## update this if not trapped every month (long.month, etc)
+#       } #d
+#     } #m
+#   } #i
+# } #w
 
