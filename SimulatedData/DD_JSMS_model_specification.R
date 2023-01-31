@@ -137,38 +137,32 @@ cat("
 
 
     ############### Likelihood ---------------------------------------#
-    # STATE PROCESS
+    
     for(w in 1:n.webs){
       for (i in 1:n.inds[w]){
+        
+        # STATE PROCESS
         # Define latent state at first dummy occasion
          z[i,1,w] <- 1   # Make sure that all individuals are in state 1 at t=1 (dummy occasion)
          # No one has entered yet (state 1) at t=1, because when input data above (Ch.primary.du), add a row before the actual data (where no has entered yet)
-
-
 
         for (m in 2:n.months[w]){  #
           # State process: draw S(t) given S(t-1)
           z[i,m,w] ~ dcat(ps[z[i,m-1,w], i, m-1, w, ])
 
+
+        # OBSERVATION PROCESS
+        # draw O(t) given S(t)
+
+          for(d in 1:n.sec.occ){
+            y[i, m, d, w] ~ dcat(po[z[i, m, w], ])   
+          } #d
+          
         } #m
       } #i
     } #w
 
-    # OBSERVATION PROCESS
-    # draw O(t) given S(t)
-
-  for(w in 1:n.webs){
-    for (i in 1:n.inds[w]){
-      # Define probabilities of State(t+1) given State(t)
-      for (m in 2:(n.months[w])){
-        for(d in 1:n.sec.occ){
-        y[i, m, d, w] ~ dcat(po[z[i, m, w], ])  # think it should be m even tho book has m-1 
-                 ## update this if not trapped every month (long.month, etc)
-        } #d
-      } #m
-    } #i
-  } #w
-
+ 
 
 
 
@@ -198,8 +192,9 @@ cat("
         B.predicted[w, m]   <-  f[w, m-1] * N[w, m-1]         # predicted new recruits = total per capita recruitment rate  *N
         Bpossible[w, m] <- sum(not.yet.entered[ , w, m])
         gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
-      
-        B[w,m] ~ dpois(B.predicted[w,m]) 
+        B[w, m] <- sum(just.entered[, w, m])
+        
+        B[w, m] ~ dpois(B.predicted[w m]) 
 
       } #m
       
