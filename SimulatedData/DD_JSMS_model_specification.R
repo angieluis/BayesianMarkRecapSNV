@@ -7,7 +7,14 @@
 
 
 ## To do: ----------------------------------------------------------##
-## fix inconsistent indexing, e.g., gamma[m,w] vs f[w,m]  
+## # 3 nodes produced errors; first error: Error in node y[1,2,1,1]
+## # Node inconsistent with parents
+## check z calculation, initz, knownz, and gamma[1]
+
+## For N/K, do I need to add a 0.001 to the K so it can't be -Inf?
+
+## fix inconsistent indexing, e.g., gamma[m,w] vs f[w,m] 
+## alive[i,w,m] z[i,m,w]
 ## -----------------------------------------------------------------##
 
 sink("DD_JSMS_model_specification.bug")
@@ -40,7 +47,7 @@ cat("
       b0          ~ dnorm(0, 0.4)T(-10, 10)   # prior for birth intercept (log at N=2)
       
       #### PRIORS for K  ######
-      k.0      ~ dnorm(0, 1)T(-10, 10)    # prior for k coef on intercept for k
+      k.0         ~ dnorm(0, 1)T(-10, 10)    # prior for k coef on intercept for k
       k.ndvi      ~ dnorm(0, 0.4)T(-10, 10)    # prior for k coef on ndvi12
       
 
@@ -65,7 +72,7 @@ cat("
 
 
        
-        ##### MODEL FOR PHI #####
+    ##### MODEL FOR PHI #####
       for(w in 1:n.webs){
         for(m in 1:(n.months[w] - 1)) {              
           
@@ -88,8 +95,8 @@ cat("
         
        
 
-        ##### MODEL FOR P #####
-        ##### 3 dimensions [indiv, month, day, web]
+    ##### MODEL FOR P #####
+    ##### 4 dimensions [indiv, month, day, web] 
      
       for(w in 1:n.webs){
         for(i in 1:n.inds[w]) {
@@ -185,10 +192,10 @@ cat("
         for (m in 1:n.months[w]){
           alive[i,w,m] <- equals(z[i, m, w], 2)
           not.yet.entered[i,w,m] <- equals(z[i, m, w], 1)
-        } #t
+        } #m
         for (m in 2:n.months[w]){
           just.entered[i, w, m] <- equals(z[i, m-1, w]-alive[i, w, m],0)
-        } #t
+        } #m
         ever.alive[i,w] <- sum(alive[i, w, ])
       } #i
     } # w
