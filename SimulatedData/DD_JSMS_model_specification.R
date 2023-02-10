@@ -196,8 +196,9 @@ cat("
         gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
         B[w, m] <- sum(just.entered[, w, m])
         
-        # define likelihood - must lie between 0 and 1 (if too large, then divide by a large enough constant to ensure all p<1)
-        pr.B[w,m] <- exp( -0.5*(B.predicted[w,m] - B[w,m])^2 )  # this assumes difference fits normal distr with variance = 1, might need to estimate
+        # Want to minimize difference between B.predicted (from N/K model) and B (predicted based on JS, which is new entries to z)
+        # define likelihood - here must lie between 0 and 1 
+        pr.B[w,m] <- exp( -0.5*(B.predicted[w,m] - B[w,m])^2 )  # this assumes difference fits normal distr with variance = 1, I don't think it matters? because it's hump shaped and max at 0
         ones[w,m] ~ dbern( pr.B[w,m] )   #------------------------------------ the 'ones trick' - want to maximize pr.B by fitting to 1
        
 
@@ -214,6 +215,18 @@ cat("
 }
     ",fill = TRUE)
 sink()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

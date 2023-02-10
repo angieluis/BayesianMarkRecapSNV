@@ -6,10 +6,7 @@
 
 ## To Do-------------------------------------------------------------------
 
-## Need to figure out known state and init functions for this array format
-## Use pre-developed functions and paste webs together?
-## For known state just need to fill in when caught and between when caught as alive (and entered)
-## For init.z just need a starting value of whatever it last was?
+## error with the ones trick. indexing?
 
 ## ------------------------------------------------------------------------
 
