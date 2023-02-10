@@ -284,7 +284,7 @@ tempcovdata2 <- list()
 for(w in 1:n.webs){
   tempcovdata2[[w]] <- sw.temp[which(sw.temp$site.web==web),]
   s.ind <- which(tempcovdata2[[w]]$date2==start.date) - 1
-  tempcovdata2[[w]] <- tempcovdata[[w]][s.ind:(s.ind+(n.months)),]
+  tempcovdata2[[w]] <- tempcovdata2[[w]][s.ind:(s.ind+(n.months)),]
   ndvi[w,1:(nzcols[w]+1)] <- tempcovdata2[[w]]$ndvi
   season[w,1:(nzcols[w]+1)] <- tempcovdata2[[w]]$season
 }
