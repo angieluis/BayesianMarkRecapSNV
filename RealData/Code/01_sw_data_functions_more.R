@@ -133,6 +133,23 @@
     state[state == 0] <- NA
     return(state)
   }
+ 
+  
+  # function to create matrix with info about known latent state z for Jolly-Seber
+  # models 
+  known.state.js <- function(ch) {
+    state <- ch
+    for (i in 1:dim(ch)[1]) {
+      n1 <- min(which(ch[i, ] == 1))
+      n2 <- max(which(ch[i, ] == 1))
+      state[i, n1:n2] <- 1
+      # only filling in those that were 0s but we know were alive
+      # because caught before and after
+      #state[i, n1] <- NA
+    }
+    state[state == 0] <- NA
+    return(state)
+  }
   
 
 ## Primary CH from secondary CH --------------------------------------------- ##
@@ -543,18 +560,14 @@
          x[2]
        }))
        
-       dat <- month.data[, cols] # problem when only 1 column (1 site.web)
+       dat <- as.data.frame(month.data[, cols]) # problem when only 1 column (1 site.web)
        names(dat) <- web.nam
        mat <- matrix(NA, 
                      ncol = dim(month.data)[1], 
                      nrow = dim(individual.covariates)[1])
        for (i in 1:dim(individual.covariates)[1]) {
          w <- individual.covariates$web[i]
-         if(length(cols) > 1){ # if more than one site.web
-           mat[i, ] <- dat[, which(names(dat) == w)]
-         } else{ # if only 1 site.web
-           mat[i, ] <- dat
-         }
+         mat[i, ] <- dat[, which(names(dat) == w)]
         } #i
        covariate.data[[c + 2]] <- mat
        names(covariate.data)[[c + 2]] <- nam
@@ -1268,7 +1281,43 @@
     return(state)
   }
   
+ 
   
+  ################################################################## 
+  ## function to specify initial values for Jolly-Seber multistate
+  ## This is specifically for multiple webs in an array format
+  # 1 not yet entered
+  # 2 alive 
+  # 3 dead
+  # this just puts in an initial value of alive (2) if ever seen
+  # or 1 if not yet seen
+  ##################################################################
+  MSJSarray.init.z <- function(ch=CH.secondary, knownz){ #assumes CH.secondary is an array [i,m,d,w]; knownz is an array [i,m,w] - assumes dummy occasion for first time point
+    initz <- array(NA, dim = dim(knownz)) 
+    for(w in 1:dim(ch)[4]){
+      #convert array to list of monthly matrices so fits in function
+      CHlist <- list()
+      for(m in 1:dim(initz)[2]){
+        CHlist[[m]] <- ch[ , m, , w]
+      }
+      monthlyCH <- primary.ch.fun(CHlist)  # as list of monthly matrices
+      
+      kn.state <- knownz[ , ,w]
+      f <- apply(monthlyCH,1,function(x){min(which(x > 0))})
+      ever.f <- which(is.finite(f))
+      state <- matrix(1, nrow = dim(kn.state)[1], ncol = dim(kn.state)[2]) # default value of not yet entered
+     for(i in ever.f){
+        state[i,f:dim(state)[2]] <- 2 # fill in 2 for alive after enter  
+      }
+      # remove those that are in the known state
+      state <- replace(state,!is.na(kn.state),NA)
+    
+
+      initz[ , , w] <- state
+    }
+    initz[, 1, ] <- NA # dummy occasion is in likelihood
+    return(initz)
+  }
   
 ##-----------------------------------------------------------------------##
 
