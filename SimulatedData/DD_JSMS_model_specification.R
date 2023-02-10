@@ -7,10 +7,12 @@
 
 
 ## To do: ----------------------------------------------------------##
-## # 3 nodes produced errors; first error: Error in node y[1,2,1,1]
-## # Node inconsistent with parents
-## check z calculation, initz, knownz, and gamma[1]
-## Missing B within the m loop calculate B then use as data to fit to predicted B
+## Trying Paul's suggestion of the 'ones trick'
+## think about the variance - assumed to be 1. IS that ok? 
+## Does it need to be estimated?
+
+## May run faster in NIMBLE instead of JAGS 
+## https://r-nimble.org/quick-guide-for-converting-from-jags-or-bugs-to-nimble
 
 ## For N/K, do I need to add a 0.001 to the K so it can't be -Inf?
 
@@ -99,7 +101,7 @@ cat("
     ##### MODEL FOR P #####
     # see below for 4 dimensions [indiv, month, day, web] 
      
-    logit(p[i, m, d, w]) <- sigma.0 
+    logit(p) <- sigma.0 
       
 
 
@@ -194,7 +196,11 @@ cat("
         gamma[m-1, w] <- B.predicted[w, m]/Bpossible[w, m-1]
         B[w, m] <- sum(just.entered[, w, m])
         
-        B[w, m] ~ dpois(B.predicted[w m]) 
+        # define likelihood - must lie between 0 and 1 (if too large, then divide by a large enough constant to ensure all p<1)
+        pr.B[w,m] <- exp( -0.5*(B.predicted[w,m] - B[w,m])^2 )  # this assumes difference fits normal distr with variance = 1, might need to estimate
+        ones[w,m] ~ dbern( pr.B[w,m] )   #------------------------------------ the 'ones trick' - want to maximize pr.B by fitting to 1
+       
+
 
       } #m
       

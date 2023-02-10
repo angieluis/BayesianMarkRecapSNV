@@ -54,7 +54,7 @@ for(w in 1:3){
   monthlyCH <- primary.ch.fun(CHlist)  # as list of monthly matrices
   #function doesn't work for animals never observed (augmented)
   knownz[1:n.inds[w] ,  ,w] <- known.state.js(monthlyCH[1:n.inds[w], ]) 
-  knownz[ ,1 ,w] <- 0 # dummy occasion
+  knownz[ ,1 ,w] <- NA # dummy occasion needs to be NA because in likelihood
   ## this so far 0=not yet entered and 1=alive. 
   ## But in the model state 1=not yet entered, 2=alive, 3=dead
   ## so add 1
@@ -73,7 +73,9 @@ jags.data <- list(
   ndvi = ndvi, # covariate mat with dimensions: [w,m]
   season = season, # mat with dimensions: [w,m]
   sex = sex.aug, # mat with dimensions: [i,w]
-  y = CHarray.aug.du,
+  y = replace(CHarray.aug.du,CHarray.aug.du==0,2), # replace 0's with 2's 
+  orig.y = CHarray.aug.du, # still with 0's for init function
+  ones = matrix(1, nrow=3 ,ncol= dim(CHarray.aug.du)[2]), #[w,m] for the 'ones' trick
   knownz = knownz, # for the init function
   z = knownz, # for known states
   primary.ch.fun = primary.ch.fun, # for init function
@@ -89,7 +91,8 @@ inits <- function(){list(m0 = runif(1, 0, 1),
                          k.season = runif(3, 0, 1), # <- c(0.6,-0.4,-0.3) # spring, summer, fall, (winter is intercept)
                          k.ndvi = runif(1, 0, 1), # <- 0.35
                          sigma.0 = runif(1, 0, 1),
-                         z = MSJSarray.init.z(y, knownz)
+                         N1.est = rnorm(3, 20, 2), 
+                         z = MSJSarray.init.z(orig.y, knownz)
                            )}
 
 
@@ -101,6 +104,7 @@ parameters <- c("m0",  #<- -2.944439 #logit(0.05)  #survival is 0.95 at N=0
               "k.0", # <- 3.1        # K is exp(k.0) at mean ndvi in winter 
               "k.season", # <- c(0.6,-0.4,-0.3) # spring, summer, fall, (winter is intercept)
               "k.ndvi", # <- 0.35
+              "N1.est", # 
               "sigma.0", #            = 0.1 
               "N",
               "f")
@@ -108,27 +112,27 @@ parameters <- c("m0",  #<- -2.944439 #logit(0.05)  #survival is 0.95 at N=0
 
 
 date() #date and time before run
-DD.JSMS.simulation.output <- jags.parallel(data     = jags.data,
+DD.JSMS.simulation.output <- jags(data     = jags.data,
                                             inits,
                                             parameters,
                                             "DD_JSMS_model_specification.bug",
-                                            n.chains = 3,
+                                            n.chains = 1,
                                             n.thin   = 0,
-                                            n.iter   = 3,
-                                            n.burnin = 1)
+                                            n.iter   = 1,
+                                            n.burnin = 0)
 
 date() #date and time after run
 save(DD.JSMS.simulation.output,file="DDJSMSsimoutput.RData")
 
-#Compilation error on line 201.
-#Index out of range taking subset of  N
+# 'compilation phase' before initialization taking a long time. (didn't say 'initializing' or 'compiling' just 'glm module loaded')
+# it is creating a graph representing the model in computer memory
+# 1 day and 3.5 hours to run 1 iteration
 
-# indexing problem with N. I think the dummy occasion is putting the indexing 
-# off. Need to check everything. And also think about not letting dummy occasion 
-# bias birth rate in the beginning.
+#Graph information:
+# Observed stochastic nodes: 252817
+# Unobserved stochastic nodes: 81397
+# Total graph size: 1078627
 
-
-
-
-
-
+# Error in jags.model(model.file, data = data, inits = init.values, n.chains = n.chains,  : 
+#                       Error in node ones[1,2]
+#                     Node inconsistent with parents
